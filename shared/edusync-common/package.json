@@ -1,0 +1,16 @@
+{
+  "name": "edusync-common",
+  "version": "1.0.0",
+  "description": "Shared common utilities and types for EduSync ERP System",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.1.6",
+    "jest": "^29.6.2",
+    "@types/node": "^20.4.5"
+  }
+}

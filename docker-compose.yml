@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  edusync-gateway:
+    build: ./services/edusync-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - edusync-finance
+      - edusync-hr
+      - edusync-student
+
+  edusync-finance:
+    build: ./services/edusync-finance
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+
+  edusync-hr:
+    build: ./services/edusync-hr
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+
+  edusync-student:
+    build: ./services/edusync-student
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+
+  edusync-web:
+    build: ./frontend/edusync-web
+    ports:
+      - "3004:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3000

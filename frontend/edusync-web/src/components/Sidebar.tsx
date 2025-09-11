@@ -10,6 +10,7 @@ import {
   FiX
 } from 'react-icons/fi';
 import EduSyncLogo from './EduSyncLogo';
+import { AiFillMoneyCollect } from 'react-icons/ai';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -43,6 +44,12 @@ const navigationItems: NavItem[] = [
     label: 'Finance',
     icon: <FiDollarSign className="w-5 h-5" />,
     path: '/finance'
+  },
+  {
+    id: 'sales',
+    label: 'Sales',
+    icon: <AiFillMoneyCollect className="w-5 h-5" />,
+    path: '/sales'
   },
   {
     id: 'academics',

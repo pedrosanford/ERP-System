@@ -1,0 +1,49 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: edusync-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: finance-service
+          uri: lb://edusync-finance
+          predicates:
+            - Path=/api/finance/**
+          filters:
+            - StripPrefix=2
+        - id: hr-service
+          uri: lb://edusync-hr
+          predicates:
+            - Path=/api/hr/**
+          filters:
+            - StripPrefix=2
+        - id: student-service
+          uri: lb://edusync-student
+          predicates:
+            - Path=/api/student/**
+          filters:
+            - StripPrefix=2
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka:8761/eureka/

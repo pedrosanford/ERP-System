@@ -25,6 +25,18 @@ spring:
             - Path=/api/student/**
           filters:
             - StripPrefix=2
+        - id: sales-service
+          uri: lb://edusync-sales
+          predicates:
+            - Path=/api/sales/**
+          filters:
+            - StripPrefix=2
+        - id: academics-service
+          uri: lb://edusync-academics
+          predicates:
+            - Path=/api/academics/**
+          filters:
+            - StripPrefix=2
       globalcors:
         cors-configurations:
           '[/**]':

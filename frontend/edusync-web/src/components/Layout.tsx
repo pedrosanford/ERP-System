@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
-import { FiMenu, FiBell, FiSearch } from 'react-icons/fi';
+import { FiMenu, FiBell, FiSearch, FiUser, FiLogOut } from 'react-icons/fi';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -8,10 +10,37 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
+
+  const handleProfileClick = () => {
+    navigate('/auth');
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/auth');
+  };
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -52,8 +81,39 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </button>
 
               {/* User avatar */}
-              <div className="w-8 h-8 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center cursor-pointer">
-                <span className="text-white font-medium text-sm">PS</span>
+              <div className="relative" ref={userMenuRef}>
+                <div 
+                  className="w-8 h-8 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                >
+                  <span className="text-white font-medium text-sm">
+                    {user ? user.name.split(' ').map(n => n[0]).join('') : 'PS'}
+                  </span>
+                </div>
+                
+                {/* User dropdown menu */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <p className="text-sm font-medium text-gray-900">{user?.name || 'Pedro Sanford'}</p>
+                      <p className="text-xs text-gray-500">{user?.email || 'pedro@edusync.com'}</p>
+                    </div>
+                    <button
+                      onClick={handleProfileClick}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <FiUser className="w-4 h-4 mr-3" />
+                      Profile Settings
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <FiLogOut className="w-4 h-4 mr-3" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

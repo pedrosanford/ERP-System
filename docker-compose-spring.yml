@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: edusync_erp
+      POSTGRES_USER: edusync
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # API Gateway
+  edusync-gateway:
+    build: ./services/edusync-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka:8761/eureka
+    depends_on:
+      - eureka
+      - edusync-finance
+      - edusync-hr
+      - edusync-student
+
+  # Service Discovery
+  eureka:
+    build: ./services/edusync-eureka
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  # Finance Service
+  edusync-finance:
+    build: ./services/edusync-finance
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/edusync_erp
+      - SPRING_DATASOURCE_USERNAME=edusync
+      - SPRING_DATASOURCE_PASSWORD=password
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka:8761/eureka
+    depends_on:
+      - postgres
+      - eureka
+
+  # HR Service
+  edusync-hr:
+    build: ./services/edusync-hr
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/edusync_erp
+      - SPRING_DATASOURCE_USERNAME=edusync
+      - SPRING_DATASOURCE_PASSWORD=password
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka:8761/eureka
+    depends_on:
+      - postgres
+      - eureka
+
+  # Student Service
+  edusync-student:
+    build: ./services/edusync-student
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/edusync_erp
+      - SPRING_DATASOURCE_USERNAME=edusync
+      - SPRING_DATASOURCE_PASSWORD=password
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka:8761/eureka
+    depends_on:
+      - postgres
+      - eureka
+
+  # Frontend (React)
+  edusync-web:
+    build: ./frontend/edusync-web
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+    depends_on:
+      - edusync-gateway
+
+volumes:
+  postgres_data:

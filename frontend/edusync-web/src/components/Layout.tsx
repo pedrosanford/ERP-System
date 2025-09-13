@@ -2,6 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
+import Dashboard from '../pages/Dashboard';
+import Students from './sections/Students';
+import Finance from './sections/Finance';
+import Sales from './sections/Sales';
+import Academics from './sections/Academics';
+import HR from './sections/HR';
 import { FiMenu, FiBell, FiSearch, FiUser, FiLogOut } from 'react-icons/fi';
 
 interface LayoutProps {
@@ -11,6 +17,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [activeSection, setActiveSection] = useState('dashboard');
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -26,6 +33,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const handleLogout = () => {
     logout();
     navigate('/auth');
+  };
+
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section);
+  };
+
+  const renderContent = () => {
+    switch(activeSection) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'students':
+        return <Students />;
+      case 'finance':
+        return <Finance />;
+      case 'sales':
+        return <Sales />;
+      case 'academics':
+        return <Academics />;
+      case 'hr':
+        return <HR />;
+      default:
+        return <Dashboard />;
+    }
   };
 
   // Close user menu when clicking outside
@@ -45,7 +75,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onToggle={toggleSidebar} 
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+      />
 
       {/* Main content */}
       <div className="lg:ml-64">
@@ -121,7 +156,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Page content */}
         <main className="p-6 max-w-7xl mx-auto min-h-screen">
-          {children}
+          {renderContent()}
         </main>
       </div>
     </div>

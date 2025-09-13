@@ -15,6 +15,8 @@ import { AiFillMoneyCollect } from 'react-icons/ai';
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
+  activeSection: string;
+  onSectionChange: (section: string) => void;
 }
 
 interface NavItem {
@@ -71,7 +73,7 @@ const navigationItems: NavItem[] = [
   }
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeSection, onSectionChange }) => {
   return (
     <>
       {/* Mobile overlay */}
@@ -105,17 +107,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {navigationItems.map((item) => (
-            <a
+            <button
               key={item.id}
-              href={item.path}
-              className="
-                flex items-center justify-between px-4 py-3 rounded-lg text-gray-700
-                hover:bg-primary-50 hover:text-primary-700 transition-all duration-200
-                group relative
-              "
+              onClick={() => onSectionChange(item.id)}
+              className={`
+                w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
+                group relative text-left
+                ${activeSection === item.id
+                  ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-500'
+                  : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
+                }
+              `}
             >
               <div className="flex items-center space-x-3">
-                <span className="text-gray-500 group-hover:text-primary-600 transition-colors">
+                <span className={`transition-colors ${
+                  activeSection === item.id ? 'text-primary-600' : 'text-gray-500 group-hover:text-primary-600'
+                }`}>
                   {item.icon}
                 </span>
                 <span className="font-medium">{item.label}</span>
@@ -129,7 +136,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
                   {item.badge}
                 </span>
               )}
-            </a>
+            </button>
           ))}
         </nav>
 

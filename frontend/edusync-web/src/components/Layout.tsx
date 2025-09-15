@@ -10,11 +10,9 @@ import Academics from './sections/Academics';
 import HR from './sections/HR';
 import { FiMenu, FiBell, FiSearch, FiUser, FiLogOut } from 'react-icons/fi';
 
-interface LayoutProps {
-  children: React.ReactNode;
-}
+interface LayoutProps {}
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout: React.FC<LayoutProps> = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [activeSection, setActiveSection] = useState('dashboard');

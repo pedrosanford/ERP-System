@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   FiHome, 
   FiUsers, 
@@ -6,8 +6,8 @@ import {
   FiBookOpen, 
   FiSettings, 
   FiLogOut,
-  FiMenu,
-  FiX
+  FiX,
+  FiChevronDown
 } from 'react-icons/fi';
 import EduSyncLogo from './EduSyncLogo';
 import { AiFillMoneyCollect } from 'react-icons/ai';
@@ -25,6 +25,7 @@ interface NavItem {
   icon: React.ReactNode;
   path: string;
   badge?: string;
+  children?: NavItem[];
 }
 
 const navigationItems: NavItem[] = [
@@ -33,13 +34,6 @@ const navigationItems: NavItem[] = [
     label: 'Dashboard',
     icon: <FiHome className="w-5 h-5" />,
     path: '/dashboard'
-  },
-  {
-    id: 'students',
-    label: 'Students',
-    icon: <FiUsers className="w-5 h-5" />,
-    path: '/students',
-    badge: 'New'
   },
   {
     id: 'finance',
@@ -54,16 +48,24 @@ const navigationItems: NavItem[] = [
     path: '/sales'
   },
   {
-    id: 'academics',
-    label: 'Academics',
-    icon: <FiBookOpen className="w-5 h-5" />,
-    path: '/academics'
-  },
-  {
     id: 'hr',
     label: 'HR Management',
     icon: <FiUsers className="w-5 h-5" />,
-    path: '/hr'
+    path: '/hr',
+    children: [
+      {
+        id: 'academics',
+        label: 'Academics',
+        icon: <FiBookOpen className="w-4 h-4" />,
+        path: '/academics'
+      },
+      {
+        id: 'students',
+        label: 'Students',
+        icon: <FiUsers className="w-4 h-4" />,
+        path: '/students'
+      }
+    ]
   },
   {
     id: 'settings',
@@ -74,6 +76,31 @@ const navigationItems: NavItem[] = [
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeSection, onSectionChange }) => {
+  const [expandedItems, setExpandedItems] = useState<string[]>(() => {
+    // Автоматически раскрываем родительский элемент, если активная секция является дочерней
+    const parentItem = navigationItems.find(item => 
+      item.children?.some(child => child.id === activeSection)
+    );
+    return parentItem ? [parentItem.id] : [];
+  });
+
+  const toggleExpanded = (itemId: string) => {
+    setExpandedItems(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
+  };
+
+  const isItemExpanded = (itemId: string) => expandedItems.includes(itemId);
+
+  const isItemActive = (item: NavItem) => {
+    if (item.id === activeSection) return true;
+    if (item.children) {
+      return item.children.some(child => child.id === activeSection);
+    }
+    return false;
+  };
   return (
     <>
       {/* Mobile overlay */}
@@ -107,36 +134,80 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeSection, onSe
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {navigationItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onSectionChange(item.id)}
-              className={`
-                w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
-                group relative text-left
-                ${activeSection === item.id
-                  ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-500'
-                  : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
-                }
-              `}
-            >
-              <div className="flex items-center space-x-3">
-                <span className={`transition-colors ${
-                  activeSection === item.id ? 'text-primary-600' : 'text-gray-500 group-hover:text-primary-600'
-                }`}>
-                  {item.icon}
-                </span>
-                <span className="font-medium">{item.label}</span>
-              </div>
-              
-              {item.badge && (
-                <span className="
-                  px-2 py-1 text-xs font-medium bg-secondary-100 text-secondary-700
-                  rounded-full
-                ">
-                  {item.badge}
-                </span>
+            <div key={item.id} className="space-y-1">
+              {/* Main navigation item */}
+              <button
+                onClick={() => {
+                  if (item.children) {
+                    toggleExpanded(item.id);
+                  } else {
+                    onSectionChange(item.id);
+                  }
+                }}
+                className={`
+                  w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
+                  group relative text-left
+                  ${isItemActive(item)
+                    ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-500'
+                    : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
+                  }
+                `}
+              >
+                <div className="flex items-center space-x-3">
+                  <span className={`transition-colors ${
+                    isItemActive(item) ? 'text-primary-600' : 'text-gray-500 group-hover:text-primary-600'
+                  }`}>
+                    {item.icon}
+                  </span>
+                  <span className="font-medium">{item.label}</span>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  {item.badge && (
+                    <span className="
+                      px-2 py-1 text-xs font-medium bg-secondary-100 text-secondary-700
+                      rounded-full
+                    ">
+                      {item.badge}
+                    </span>
+                  )}
+                  {item.children && (
+                    <span className={`transition-transform duration-200 ${
+                      isItemExpanded(item.id) ? 'rotate-180' : ''
+                    }`}>
+                      <FiChevronDown className="w-4 h-4" />
+                    </span>
+                  )}
+                </div>
+              </button>
+
+              {/* Sub-navigation items */}
+              {item.children && isItemExpanded(item.id) && (
+                <div className="ml-6 space-y-1">
+                  {item.children.map((child) => (
+                    <button
+                      key={child.id}
+                      onClick={() => onSectionChange(child.id)}
+                      className={`
+                        w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-200
+                        text-sm
+                        ${activeSection === child.id
+                          ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-500'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }
+                      `}
+                    >
+                      <span className={`transition-colors ${
+                        activeSection === child.id ? 'text-primary-600' : 'text-gray-400'
+                      }`}>
+                        {child.icon}
+                      </span>
+                      <span className="font-medium">{child.label}</span>
+                    </button>
+                  ))}
+                </div>
               )}
-            </button>
+            </div>
           ))}
         </nav>
 

@@ -3,7 +3,6 @@ import {
     FiHome,
     FiUsers,
     FiDollarSign,
-    FiBookOpen,
     FiSettings,
     FiLogOut,
     FiX,
@@ -113,12 +112,6 @@ const navigationItems: NavItem[] = [
         icon: <FiUsers className="w-5 h-5"/>,
         path: '/hr',
         children: [
-            {
-                id: 'academics',
-                label: 'Academics',
-                icon: <FiBookOpen className="w-4 h-4"/>,
-                path: '/academics'
-            },
             {
                 id: 'students',
                 label: 'Students',

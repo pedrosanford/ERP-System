@@ -7,8 +7,6 @@ import Students from './sections/HR-Management/Students.tsx';
 import Finance from './sections/Finance';
 import Sales from './sections/Sales';
 import EmailTemplates from './sections/sales/EmailTemplates';
-import Academics from './sections/Academics';
-import HR from './sections/HR';
 import { FiMenu, FiBell, FiSearch, FiUser, FiLogOut } from 'react-icons/fi';
 import Staff from "./sections/HR-Management/Staff.tsx";
 import Documents from "./sections/HR-Management/Documents.tsx";
@@ -66,10 +64,6 @@ const Layout: React.FC<LayoutProps> = () => {
         return <Sales />;
       case 'email-templates':
         return <EmailTemplates />;
-      case 'academics':
-        return <Academics />;
-      case 'hr':
-        return <HR />;
       default:
         return <Dashboard />;
     }

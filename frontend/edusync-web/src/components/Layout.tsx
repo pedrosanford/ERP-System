@@ -44,7 +44,13 @@ const Layout: React.FC<LayoutProps> = () => {
       case 'students':
         return <Students />;
       case 'finance':
-        return <Finance />;
+      case 'finance-transactions':
+      case 'finance-analytics':
+      case 'finance-payments':
+      case 'finance-invoices':
+      case 'finance-reports':
+      case 'finance-budget':
+        return <Finance activeSection={activeSection} />;
       case 'sales':
         return <Sales />;
       case 'academics':

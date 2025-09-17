@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  FiHome, 
-  FiUsers, 
-  FiDollarSign, 
-  FiBookOpen, 
-  FiSettings, 
+import React, { useState } from 'react';
+import {
+  FiHome,
+  FiUsers,
+  FiDollarSign,
+  FiSettings,
   FiLogOut,
   FiX,
   FiChevronDown,
-  FiCreditCard,
-  FiFileText,
-  FiBarChart,
-  FiPieChart
+  FiFile,
+  FiTrendingUp
 } from 'react-icons/fi';
 import EduSyncLogo from './EduSyncLogo';
 import { AiFillMoneyCollect } from 'react-icons/ai';
@@ -43,45 +40,7 @@ const navigationItems: NavItem[] = [
     id: 'finance',
     label: 'Finance',
     icon: <FiDollarSign className="w-5 h-5" />,
-    path: '/finance',
-    children: [
-      {
-        id: 'finance-transactions',
-        label: 'Recent Transactions',
-        icon: <FiDollarSign className="w-4 h-4" />,
-        path: '/finance/transactions'
-      },
-      {
-        id: 'finance-analytics',
-        label: 'Financial Analytics',
-        icon: <FiBarChart className="w-4 h-4" />,
-        path: '/finance/analytics'
-      },
-      {
-        id: 'finance-payments',
-        label: 'Payment Processing',
-        icon: <FiCreditCard className="w-4 h-4" />,
-        path: '/finance/payments'
-      },
-      {
-        id: 'finance-invoices',
-        label: 'Invoice Management',
-        icon: <FiFileText className="w-4 h-4" />,
-        path: '/finance/invoices'
-      },
-      {
-        id: 'finance-reports',
-        label: 'Financial Reports',
-        icon: <FiPieChart className="w-4 h-4" />,
-        path: '/finance/reports'
-      },
-      {
-        id: 'finance-budget',
-        label: 'Budget Management',
-        icon: <FiPieChart className="w-4 h-4" />,
-        path: '/finance/budget'
-      }
-    ]
+    path: '/finance'
   },
   {
     id: 'sales',
@@ -96,16 +55,28 @@ const navigationItems: NavItem[] = [
     path: '/hr',
     children: [
       {
-        id: 'academics',
-        label: 'Academics',
-        icon: <FiBookOpen className="w-4 h-4" />,
-        path: '/academics'
-      },
-      {
         id: 'students',
         label: 'Students',
         icon: <FiUsers className="w-4 h-4" />,
         path: '/students'
+      },
+      {
+        id: 'staff',
+        label: 'Staff',
+        icon: <FiUsers className="w-4 h-4" />,
+        path: '/staff'
+      },
+      {
+        id: 'documents',
+        label: 'Documents',
+        icon: <FiFile className="w-4 h-4" />,
+        path: '/documents'
+      },
+      {
+        id: 'staff evaluation',
+        label: 'Staff Evaluation',
+        icon: <FiTrendingUp className="w-4 h-4" />,
+        path: '/StaffEvaluation'
       }
     ]
   },
@@ -143,15 +114,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeSection, onSe
     }
     return false;
   };
-
-  // Автоматически раскрываем Finance, если активна любая из его дочерних секций
-  useEffect(() => {
-    if (activeSection.startsWith('finance-')) {
-      setExpandedItems(prev => 
-        prev.includes('finance') ? prev : [...prev, 'finance']
-      );
-    }
-  }, [activeSection]);
   return (
     <>
       {/* Mobile overlay */}
@@ -190,13 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, activeSection, onSe
               <button
                 onClick={() => {
                   if (item.children) {
-                    // Для Finance сразу переключаемся на основной дашборд И раскрываем список
-                    if (item.id === 'finance') {
-                      onSectionChange('finance');
-                      toggleExpanded(item.id);
-                    } else {
-                      toggleExpanded(item.id);
-                    }
+                    toggleExpanded(item.id);
                   } else {
                     onSectionChange(item.id);
                   }

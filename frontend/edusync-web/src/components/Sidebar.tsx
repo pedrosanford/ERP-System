@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FiHome,
   FiUsers,
@@ -10,23 +9,11 @@ import {
   FiX,
   FiChevronDown,
   FiMail,
-  FiTarget
-=======
-import React, { useState, useEffect } from 'react';
-import { 
-  FiHome, 
-  FiUsers, 
-  FiDollarSign, 
-  FiBookOpen, 
-  FiSettings, 
-  FiLogOut,
-  FiX,
-  FiChevronDown,
+  FiTarget,
   FiCreditCard,
   FiFileText,
   FiBarChart,
   FiPieChart
->>>>>>> d91e58f2a2674545de58342cc85ca39a28f284cf
 } from 'react-icons/fi';
 import EduSyncLogo from './EduSyncLogo';
 import { AiFillMoneyCollect } from 'react-icons/ai';

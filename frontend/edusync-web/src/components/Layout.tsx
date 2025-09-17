@@ -6,6 +6,8 @@ import Dashboard from '../pages/Dashboard';
 import Students from './sections/HR-Management/Students.tsx';
 import Finance from './sections/Finance';
 import Sales from './sections/Sales';
+import EmailTemplates from './sections/sales/EmailTemplates';
+import Academics from './sections/Academics';
 import HR from './sections/HR';
 import { FiMenu, FiBell, FiSearch, FiUser, FiLogOut } from 'react-icons/fi';
 import Staff from "./sections/HR-Management/Staff.tsx";
@@ -52,9 +54,20 @@ const Layout: React.FC<LayoutProps> = () => {
       case 'staff evaluation':
         return <StaffEvaluation />;
       case 'finance':
-        return <Finance />;
+      case 'finance-transactions':
+      case 'finance-analytics':
+      case 'finance-payments':
+      case 'finance-invoices':
+      case 'finance-reports':
+      case 'finance-budget':
+        return <Finance activeSection={activeSection} />;
       case 'sales':
+      case 'sales-pipeline':
         return <Sales />;
+      case 'email-templates':
+        return <EmailTemplates />;
+      case 'academics':
+        return <Academics />;
       case 'hr':
         return <HR />;
       default:

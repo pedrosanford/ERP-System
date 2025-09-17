@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiDollarSign, FiTrendingUp, FiTrendingDown, FiCreditCard, FiPieChart, FiBarChart, FiTarget } from 'react-icons/fi';
 import Modal from './finance/Modal';
 import ProcessPaymentModal from './finance/ProcessPaymentModal';
@@ -16,7 +16,11 @@ import AllInvoicesView from './finance/AllInvoicesView';
 import AllReportsView from './finance/AllReportsView';
 import AllBudgetView from './finance/AllBudgetView';
 
-const Finance: React.FC = () => {
+interface FinanceProps {
+  activeSection: string;
+}
+
+const Finance: React.FC<FinanceProps> = ({ activeSection }) => {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [showFinancialAnalytics, setShowFinancialAnalytics] = useState(false);
@@ -24,6 +28,46 @@ const Finance: React.FC = () => {
   const [showAllInvoices, setShowAllInvoices] = useState(false);
   const [showAllReports, setShowAllReports] = useState(false);
   const [showAllBudget, setShowAllBudget] = useState(false);
+
+  // Обработка изменений activeSection из Sidebar
+  useEffect(() => {
+    // Сбрасываем все состояния при изменении секции
+    setShowAllTransactions(false);
+    setShowFinancialAnalytics(false);
+    setShowAllPayments(false);
+    setShowAllInvoices(false);
+    setShowAllReports(false);
+    setShowAllBudget(false);
+    setActiveModal(null);
+
+    // Устанавливаем соответствующее состояние в зависимости от activeSection
+    switch (activeSection) {
+      case 'finance':
+        // Показываем основной дашборд
+        break;
+      case 'finance-transactions':
+        setShowAllTransactions(true);
+        break;
+      case 'finance-analytics':
+        setShowFinancialAnalytics(true);
+        break;
+      case 'finance-payments':
+        setShowAllPayments(true);
+        break;
+      case 'finance-invoices':
+        setShowAllInvoices(true);
+        break;
+      case 'finance-reports':
+        setShowAllReports(true);
+        break;
+      case 'finance-budget':
+        setShowAllBudget(true);
+        break;
+      default:
+        // Для других секций показываем основной дашборд
+        break;
+    }
+  }, [activeSection]);
 
   const openModal = (modalType: string) => {
     setActiveModal(modalType);
@@ -34,69 +78,68 @@ const Finance: React.FC = () => {
   };
 
   const handleViewAllTransactions = () => {
-    setShowAllTransactions(true);
+    // Навигация теперь происходит через Sidebar
+    // Эта функция может быть удалена или использована для других целей
   };
 
   const handleBackToFinance = () => {
-    setShowAllTransactions(false);
-    setShowFinancialAnalytics(false);
-    setShowAllPayments(false);
-    setShowAllInvoices(false);
-    setShowAllReports(false);
-    setShowAllBudget(false);
+    // Навигация теперь происходит через Sidebar
+    // Эта функция может быть удалена или использована для других целей
   };
 
   const handleViewAllAnalytics = () => {
-    setShowFinancialAnalytics(true);
+    // Навигация теперь происходит через Sidebar
+    // Эта функция может быть удалена или использована для других целей
   };
 
   const handleViewAllPayments = () => {
-    setShowAllPayments(true);
+    // Навигация теперь происходит через Sidebar
+    // Эта функция может быть удалена или использована для других целей
   };
 
   const handleViewAllInvoices = () => {
-    setShowAllInvoices(true);
+    // Навигация теперь происходит через Sidebar
+    // Эта функция может быть удалена или использована для других целей
   };
 
   const handleViewAllReports = () => {
-    setShowAllReports(true);
+    // Навигация теперь происходит через Sidebar
+    // Эта функция может быть удалена или использована для других целей
   };
 
   const handleViewAllBudget = () => {
-    setShowAllBudget(true);
+    // Навигация теперь происходит через Sidebar
+    // Эта функция может быть удалена или использована для других целей
   };
 
-  // Show All Transactions view if requested
+  // Show specific views based on activeSection
   if (showAllTransactions) {
     return <AllTransactionsView onBack={handleBackToFinance} />;
   }
 
-  // Show Financial Analytics view if requested
   if (showFinancialAnalytics) {
     return <FinancialAnalyticsView onBack={handleBackToFinance} />;
   }
 
-  // Show All Payments view if requested
   if (showAllPayments) {
     return <AllPaymentsView onBack={handleBackToFinance} />;
   }
 
-  // Show All Invoices view if requested
   if (showAllInvoices) {
     return <AllInvoicesView onBack={handleBackToFinance} />;
   }
 
-  // Show All Reports view if requested
   if (showAllReports) {
     return <AllReportsView onBack={handleBackToFinance} />;
   }
 
-  // Show All Budget view if requested
   if (showAllBudget) {
     return <AllBudgetView onBack={handleBackToFinance} />;
   }
 
-  return (
+  // Show main dashboard for 'finance'
+  if (activeSection === 'finance') {
+    return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
@@ -375,7 +418,11 @@ const Finance: React.FC = () => {
         <ManageBudgetModal isOpen={activeModal === 'manageBudget'} onClose={closeModal} />
       </Modal>
     </div>
-  );
+    );
+  }
+
+  // Fallback - should not reach here
+  return null;
 };
 
 export default Finance;

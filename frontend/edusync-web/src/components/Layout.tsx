@@ -6,6 +6,7 @@ import Dashboard from '../pages/Dashboard';
 import Students from './sections/Students';
 import Finance from './sections/Finance';
 import Sales from './sections/Sales';
+import EmailTemplates from './sections/sales/EmailTemplates';
 import Academics from './sections/Academics';
 import HR from './sections/HR';
 import { FiMenu, FiBell, FiSearch, FiUser, FiLogOut } from 'react-icons/fi';
@@ -46,7 +47,10 @@ const Layout: React.FC<LayoutProps> = () => {
       case 'finance':
         return <Finance />;
       case 'sales':
+      case 'sales-pipeline':
         return <Sales />;
+      case 'email-templates':
+        return <EmailTemplates />;
       case 'academics':
         return <Academics />;
       case 'hr':

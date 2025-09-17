@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { 
-  FiHome, 
-  FiUsers, 
-  FiDollarSign, 
-  FiBookOpen, 
-  FiSettings, 
+import {
+  FiHome,
+  FiUsers,
+  FiDollarSign,
+  FiBookOpen,
+  FiSettings,
   FiLogOut,
   FiX,
-  FiChevronDown
+  FiChevronDown,
+  FiMail,
+  FiTarget
 } from 'react-icons/fi';
 import EduSyncLogo from './EduSyncLogo';
 import { AiFillMoneyCollect } from 'react-icons/ai';
@@ -45,7 +47,21 @@ const navigationItems: NavItem[] = [
     id: 'sales',
     label: 'Sales',
     icon: <AiFillMoneyCollect className="w-5 h-5" />,
-    path: '/sales'
+    path: '/sales',
+    children: [
+      {
+        id: 'sales-pipeline',
+        label: 'Pipeline',
+        icon: <FiTarget className="w-4 h-4" />,
+        path: '/sales'
+      },
+      {
+        id: 'email-templates',
+        label: 'Email Templates',
+        icon: <FiMail className="w-4 h-4" />,
+        path: '/email-templates'
+      }
+    ]
   },
   {
     id: 'hr',

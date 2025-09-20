@@ -2,20 +2,29 @@ import React, { useState } from 'react';
 import {
   FiTarget, FiUsers, FiTrendingUp, FiDollarSign, FiPhone, FiMail,
   FiCalendar, FiClock, FiMessageSquare, FiExternalLink, FiFilter,
-  FiSearch, FiMapPin, FiBook, FiStar, FiMoreHorizontal, FiChevronDown,
-  FiX, FiEdit, FiSave, FiPlus, FiCheck, FiUser, FiBookOpen, FiFileText
+  FiSearch, FiMapPin, FiBook, FiX, FiEdit, FiSave, FiPlus, FiCheck,
+  FiUser, FiFileText, FiTrash2, FiSettings, FiMove
 } from 'react-icons/fi';
 
 const Sales: React.FC = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedLead, setEditedLead] = useState<any | null>(null);
   const [showAddLeadModal, setShowAddLeadModal] = useState(false);
   const [selectedDashboardItem, setSelectedDashboardItem] = useState<any | null>(null);
   const [draggedLead, setDraggedLead] = useState<number | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
-  const kanbanStages = [
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [editingStage, setEditingStage] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showColumnModal, setShowColumnModal] = useState(false);
+  const [newColumnTitle, setNewColumnTitle] = useState('');
+  const [newColumnColor, setNewColumnColor] = useState('bg-blue-500');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
+  const [migrationTarget, setMigrationTarget] = useState<string>('');
+  const [kanbanStages, setKanbanStages] = useState([
     { id: 'inquiry', title: 'New Inquiry', color: 'bg-blue-500', lineColor: 'bg-blue-500', count: 1 },
     { id: 'contacted', title: 'Contacted', color: 'bg-yellow-500', lineColor: 'bg-yellow-500', count: 1 },
     { id: 'application-started', title: 'Application Started', color: 'bg-orange-500', lineColor: 'bg-orange-500', count: 1 },
@@ -24,7 +33,7 @@ const Sales: React.FC = () => {
     { id: 'accepted', title: 'Accepted/Offered', color: 'bg-green-500', lineColor: 'bg-green-500', count: 0 },
     { id: 'enrolled', title: 'Enrolled', color: 'bg-emerald-500', lineColor: 'bg-emerald-500', count: 0 },
     { id: 'lost', title: 'Lost/Not Interested', color: 'bg-gray-500', lineColor: 'bg-gray-500', count: 0 }
-  ];
+  ]);
 
   const [leadsData, setLeadsData] = useState([
     {
@@ -302,6 +311,130 @@ const Sales: React.FC = () => {
     setDragOverStage(null);
   };
 
+  // Handle stage title editing
+  const handleStageEdit = (stageId: string, newTitle: string) => {
+    setKanbanStages(stages =>
+      stages.map(stage =>
+        stage.id === stageId ? { ...stage, title: newTitle } : stage
+      )
+    );
+    setEditingStage(null);
+  };
+
+  // Handle adding new column
+  const handleAddColumn = () => {
+    if (newColumnTitle.trim()) {
+      const newId = `custom-${Date.now()}`;
+      const newStage = {
+        id: newId,
+        title: newColumnTitle.trim(),
+        color: newColumnColor,
+        lineColor: newColumnColor,
+        count: 0
+      };
+      setKanbanStages(stages => [...stages, newStage]);
+      setNewColumnTitle('');
+      setNewColumnColor('bg-blue-500');
+      setShowColumnModal(false);
+    }
+  };
+
+  // Handle removing column
+  const handleRemoveColumn = (stageId: string) => {
+    const hasLeads = leadsData.some(lead => lead.status === stageId);
+    const remainingStages = kanbanStages.filter(stage => stage.id !== stageId);
+
+    // Prevent removing the last column
+    if (remainingStages.length === 0) {
+      alert('Cannot remove the last column. At least one column must remain.');
+      return;
+    }
+
+    if (hasLeads) {
+      // Show migration modal
+      setColumnToDelete(stageId);
+      setMigrationTarget(remainingStages[0].id); // Default to first remaining stage
+      setShowDeleteModal(true);
+    } else {
+      // No leads, safe to delete
+      setKanbanStages(stages => stages.filter(stage => stage.id !== stageId));
+    }
+  };
+
+  // Handle column deletion with lead migration
+  const handleConfirmDelete = () => {
+    if (columnToDelete && migrationTarget) {
+      // Migrate leads to target column
+      setLeadsData(leads =>
+        leads.map(lead =>
+          lead.status === columnToDelete ? { ...lead, status: migrationTarget } : lead
+        )
+      );
+
+      // Remove the column
+      setKanbanStages(stages => stages.filter(stage => stage.id !== columnToDelete));
+
+      // Reset state
+      setShowDeleteModal(false);
+      setColumnToDelete(null);
+      setMigrationTarget('');
+    }
+  };
+
+  // Column reordering handlers
+  const handleColumnDragStart = (e: React.DragEvent, stageId: string) => {
+    setDraggedColumn(stageId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'column', id: stageId }));
+  };
+
+  const handleColumnDragEnd = () => {
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+  };
+
+  const handleColumnDragOver = (e: React.DragEvent, targetStageId: string) => {
+    e.preventDefault();
+    if (draggedColumn && draggedColumn !== targetStageId) {
+      e.dataTransfer.dropEffect = 'move';
+      setDragOverColumn(targetStageId);
+    }
+  };
+
+  const handleColumnDrop = (e: React.DragEvent, targetStageId: string) => {
+    e.preventDefault();
+    if (draggedColumn && draggedColumn !== targetStageId) {
+      const draggedIndex = kanbanStages.findIndex(s => s.id === draggedColumn);
+      const targetIndex = kanbanStages.findIndex(s => s.id === targetStageId);
+
+      const newStages = [...kanbanStages];
+      const draggedItem = newStages.splice(draggedIndex, 1)[0];
+      newStages.splice(targetIndex, 0, draggedItem);
+
+      setKanbanStages(newStages);
+    }
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+  };
+
+  // Filter leads based on search term and selected filter
+  const filteredLeads = leadsData.filter(lead => {
+    // Search filter
+    const matchesSearch = searchTerm === '' ||
+      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.parentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.program.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.source.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Grade filter
+    const matchesGradeFilter = selectedFilter === 'all' ||
+      (selectedFilter === 'elementary' && ['K', '1st Grade', '2nd Grade', '3rd Grade', '4th Grade', '5th Grade'].includes(lead.grade)) ||
+      (selectedFilter === 'middle' && ['6th Grade', '7th Grade', '8th Grade'].includes(lead.grade)) ||
+      (selectedFilter === 'high' && ['9th Grade', '10th Grade', '11th Grade', '12th Grade'].includes(lead.grade));
+
+    return matchesSearch && matchesGradeFilter;
+  });
+
   // Dashboard data with detailed information
   const dashboardItems = [
     {
@@ -435,7 +568,27 @@ const Sales: React.FC = () => {
         })}
 
         {/* Additional Dashboard Items */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50">
+        <div
+          onClick={() => setSelectedDashboardItem({
+            id: 'upcoming-events',
+            title: 'Upcoming Events',
+            value: '8',
+            subtitle: '3 open houses this week',
+            expandedData: {
+              events: [
+                { id: 1, title: 'Open House - Elementary', date: '2025-01-20', time: '10:00 AM', location: 'Main Campus', attendees: 45, type: 'Open House' },
+                { id: 2, title: 'Open House - High School', date: '2025-01-22', time: '2:00 PM', location: 'Main Campus', attendees: 38, type: 'Open House' },
+                { id: 3, title: 'Virtual Information Session', date: '2025-01-24', time: '7:00 PM', location: 'Online', attendees: 52, type: 'Virtual' },
+                { id: 4, title: 'Campus Tour for Families', date: '2025-01-25', time: '11:00 AM', location: 'Main Campus', attendees: 12, type: 'Tour' },
+                { id: 5, title: 'STEM Program Showcase', date: '2025-01-27', time: '3:00 PM', location: 'Science Building', attendees: 28, type: 'Showcase' },
+                { id: 6, title: 'Arts Program Showcase', date: '2025-01-29', time: '6:00 PM', location: 'Arts Center', attendees: 35, type: 'Showcase' },
+                { id: 7, title: 'Parent Q&A Session', date: '2025-01-30', time: '7:30 PM', location: 'Auditorium', attendees: 42, type: 'Q&A' },
+                { id: 8, title: 'IB Program Information Night', date: '2025-02-01', time: '6:30 PM', location: 'Library', attendees: 18, type: 'Information' }
+              ]
+            }
+          })}
+          className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Upcoming Events</p>
@@ -446,7 +599,30 @@ const Sales: React.FC = () => {
           <p className="text-sm text-gray-600 mt-2">3 open houses this week</p>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50">
+        <div
+          onClick={() => setSelectedDashboardItem({
+            id: 'top-lead-source',
+            title: 'Top Lead Source',
+            value: 'School Fairs',
+            subtitle: '32% of all leads',
+            expandedData: {
+              sources: [
+                { source: 'School Fairs', count: 15, percentage: 32, trend: '+5%', description: 'Local education fairs and college prep events' },
+                { source: 'Website', count: 12, percentage: 26, trend: '+12%', description: 'Organic traffic and inquiry forms' },
+                { source: 'Referrals', count: 10, percentage: 21, trend: '+8%', description: 'Current families and word-of-mouth' },
+                { source: 'Social Media', count: 7, percentage: 15, trend: '+3%', description: 'Facebook, Instagram, and LinkedIn campaigns' },
+                { source: 'Direct Mail', count: 2, percentage: 4, trend: '-2%', description: 'Targeted mailers to local families' },
+                { source: 'Other', count: 1, percentage: 2, trend: '0%', description: 'Miscellaneous sources' }
+              ],
+              topPerformers: [
+                { name: 'North County Education Fair', leads: 8, date: '2025-01-15' },
+                { name: 'Private School Showcase', leads: 4, date: '2025-01-10' },
+                { name: 'STEM Education Expo', leads: 3, date: '2025-01-08' }
+              ]
+            }
+          })}
+          className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Top Lead Source</p>
@@ -457,7 +633,28 @@ const Sales: React.FC = () => {
           <p className="text-sm text-gray-600 mt-2">32% of all leads</p>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50">
+        <div
+          onClick={() => setSelectedDashboardItem({
+            id: 'follow-ups',
+            title: 'Follow-ups Due Today',
+            value: '12',
+            subtitle: '5 overdue from yesterday',
+            expandedData: {
+              todayFollowUps: [
+                { id: 1, leadName: 'Sarah Johnson', type: 'Call', time: '9:00 AM', priority: 'high', notes: 'Discuss robotics program details' },
+                { id: 2, leadName: 'Alex Chen', type: 'Email', time: '10:30 AM', priority: 'medium', notes: 'Send financial aid information' },
+                { id: 3, leadName: 'Emma Rodriguez', type: 'Meeting', time: '2:00 PM', priority: 'high', notes: 'Portfolio review follow-up' },
+                { id: 4, leadName: 'David Kim', type: 'Call', time: '3:30 PM', priority: 'medium', notes: 'Check on transcript status' }
+              ],
+              overdueFollowUps: [
+                { id: 5, leadName: 'Maria Garcia', type: 'Call', daysOverdue: 1, priority: 'high', notes: 'Admission decision discussion' },
+                { id: 6, leadName: 'John Smith', type: 'Email', daysOverdue: 1, priority: 'medium', notes: 'Tour scheduling' },
+                { id: 7, leadName: 'Lisa Wong', type: 'Call', daysOverdue: 2, priority: 'high', notes: 'Scholarship application review' }
+              ]
+            }
+          })}
+          className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Follow-ups Due Today</p>
@@ -468,7 +665,36 @@ const Sales: React.FC = () => {
           <p className="text-sm text-red-600 mt-2">5 overdue from yesterday</p>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50">
+        <div
+          onClick={() => setSelectedDashboardItem({
+            id: 'communications',
+            title: 'Communications',
+            value: '156',
+            subtitle: '89 emails, 67 calls',
+            expandedData: {
+              summary: {
+                totalThisMonth: 156,
+                emails: 89,
+                calls: 67,
+                meetings: 12,
+                texts: 8
+              },
+              recentActivity: [
+                { id: 1, type: 'email', leadName: 'Sarah Johnson', subject: 'STEM Program Information', timestamp: '2025-01-20T14:30:00Z', status: 'sent' },
+                { id: 2, type: 'call', leadName: 'Alex Chen', duration: '15 mins', timestamp: '2025-01-20T13:15:00Z', status: 'completed' },
+                { id: 3, type: 'email', leadName: 'Emma Rodriguez', subject: 'Portfolio Review Results', timestamp: '2025-01-20T11:45:00Z', status: 'opened' },
+                { id: 4, type: 'call', leadName: 'David Kim', duration: '8 mins', timestamp: '2025-01-20T10:20:00Z', status: 'voicemail' },
+                { id: 5, type: 'meeting', leadName: 'Sophia Williams', subject: 'Campus Tour Follow-up', timestamp: '2025-01-20T09:00:00Z', status: 'completed' }
+              ],
+              responseRates: {
+                email: 68,
+                call: 82,
+                text: 94
+              }
+            }
+          })}
+          className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Communications</p>
@@ -489,6 +715,8 @@ const Sales: React.FC = () => {
               <input
                 type="text"
                 placeholder="Search leads..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
@@ -531,8 +759,22 @@ const Sales: React.FC = () => {
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-gray-900">Student Recruitment Pipeline</h3>
-            <div className="text-sm text-gray-600">
-              Total Pipeline: <span className="font-semibold">{leadsData.length} leads</span>
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-600">
+                Total Pipeline: <span className="font-semibold">{filteredLeads.length} leads</span>
+                {searchTerm && (
+                  <span className="ml-2 text-blue-600">
+                    (filtered from {leadsData.length})
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowColumnModal(true)}
+                className="flex items-center space-x-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
+              >
+                <FiSettings className="w-4 h-4" />
+                <span>Manage Columns</span>
+              </button>
             </div>
           </div>
         </div>
@@ -541,22 +783,81 @@ const Sales: React.FC = () => {
           <div className="flex gap-4 overflow-x-auto pb-4">
             {kanbanStages.map((stage) => {
               const isDraggedOver = dragOverStage === stage.id;
+              const isColumnDraggedOver = dragOverColumn === stage.id;
+              const isColumnBeingDragged = draggedColumn === stage.id;
+              const stageLeads = filteredLeads.filter(lead => lead.status === stage.id);
 
               return (
                 <div
                   key={stage.id}
                   className={`min-w-80 flex-shrink-0 bg-gray-50 rounded-lg transition-all duration-200 ${
                     isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-300' : ''
+                  } ${
+                    isColumnDraggedOver ? 'bg-green-50 ring-2 ring-green-300' : ''
+                  } ${
+                    isColumnBeingDragged ? 'opacity-50' : ''
                   }`}
-                  onDragOver={(e) => handleDragOver(e, stage.id)}
+                  onDragOver={(e) => {
+                    handleDragOver(e, stage.id);
+                    handleColumnDragOver(e, stage.id);
+                  }}
                   onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, stage.id)}
+                  onDrop={(e) => {
+                    handleDrop(e, stage.id);
+                    handleColumnDrop(e, stage.id);
+                  }}
                 >
-                <div className="p-4 border-b border-gray-200 relative">
+                <div
+                  className="p-4 border-b border-gray-200 relative cursor-move"
+                  draggable
+                  onDragStart={(e) => handleColumnDragStart(e, stage.id)}
+                  onDragEnd={handleColumnDragEnd}
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-gray-900 text-sm">{stage.title}</h4>
+                    <div className="flex items-center space-x-2 flex-1">
+                      {/* Drag handle */}
+                      <FiMove className="w-4 h-4 text-gray-400 hover:text-gray-600 transition-colors" />
+
+                      {editingStage === stage.id ? (
+                        <input
+                          type="text"
+                          defaultValue={stage.title}
+                          className="font-medium text-gray-900 text-sm bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1"
+                          onBlur={(e) => handleStageEdit(stage.id, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleStageEdit(stage.id, e.currentTarget.value);
+                            }
+                            if (e.key === 'Escape') {
+                              setEditingStage(null);
+                            }
+                          }}
+                          autoFocus
+                        />
+                      ) : (
+                        <h4
+                          className="font-medium text-gray-900 text-sm cursor-pointer hover:text-blue-600 flex items-center group flex-1"
+                          onClick={() => setEditingStage(stage.id)}
+                        >
+                          {stage.title}
+                          <FiEdit className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </h4>
+                      )}
+
+                      {/* Delete button for all columns */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveColumn(stage.id);
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                        title="Delete column"
+                      >
+                        <FiTrash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                     <span className={`text-xs text-white px-2 py-1 rounded-full ${stage.color}`}>
-                      {leadsData.filter(lead => lead.status === stage.id).length}
+                      {stageLeads.length}
                     </span>
                   </div>
                   <div className={`absolute bottom-0 left-0 right-0 h-1 ${stage.lineColor} rounded-b-sm`}></div>
@@ -566,12 +867,16 @@ const Sales: React.FC = () => {
                       <span className="text-blue-700 font-medium text-sm">Drop lead here</span>
                     </div>
                   )}
+
+                  {isColumnDraggedOver && (
+                    <div className="absolute inset-0 bg-green-100 bg-opacity-50 rounded-t-lg flex items-center justify-center">
+                      <span className="text-green-700 font-medium text-sm">Reorder column here</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-4 space-y-4 min-h-96 max-h-[600px] overflow-y-auto">
-                  {leadsData
-                    .filter(lead => lead.status === stage.id)
-                    .map((lead) => (
+                  {stageLeads.map((lead) => (
                       <div
                         key={lead.id}
                         className={`bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 ${
@@ -633,7 +938,7 @@ const Sales: React.FC = () => {
                   </div>
 
                   {/* Drop zone for empty columns */}
-                  {leadsData.filter(lead => lead.status === stage.id).length === 0 && isDraggedOver && (
+                  {stageLeads.length === 0 && isDraggedOver && (
                     <div className="border-2 border-dashed border-blue-400 bg-blue-50 rounded-lg p-8 text-center">
                       <span className="text-blue-700 font-medium">Drop lead here</span>
                     </div>
@@ -1414,6 +1719,233 @@ const Sales: React.FC = () => {
                   </div>
                 </>
               )}
+
+              {selectedDashboardItem.id === 'upcoming-events' && (
+                <>
+                  {/* Events List */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Events</h3>
+                    <div className="space-y-4">
+                      {selectedDashboardItem.expandedData.events.map((event: any) => (
+                        <div key={event.id} className="bg-white p-4 rounded-lg border border-gray-200">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-semibold text-gray-900">{event.title}</h4>
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              event.type === 'Open House' ? 'bg-blue-100 text-blue-700' :
+                              event.type === 'Virtual' ? 'bg-purple-100 text-purple-700' :
+                              event.type === 'Tour' ? 'bg-green-100 text-green-700' :
+                              event.type === 'Showcase' ? 'bg-orange-100 text-orange-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {event.type}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                            <div className="flex items-center">
+                              <FiCalendar className="w-4 h-4 mr-2" />
+                              {new Date(event.date).toLocaleDateString()} at {event.time}
+                            </div>
+                            <div className="flex items-center">
+                              <FiMapPin className="w-4 h-4 mr-2" />
+                              {event.location}
+                            </div>
+                            <div className="flex items-center">
+                              <FiUsers className="w-4 h-4 mr-2" />
+                              {event.attendees} attendees expected
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {selectedDashboardItem.id === 'top-lead-source' && (
+                <>
+                  {/* Lead Sources Breakdown */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Lead Sources Breakdown</h3>
+                    <div className="space-y-4">
+                      {selectedDashboardItem.expandedData.sources.map((source: any, index: number) => (
+                        <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
+                          <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-semibold text-gray-900">{source.source}</h4>
+                            <div className="flex items-center space-x-2">
+                              <span className="font-semibold">{source.count} leads</span>
+                              <span className="text-gray-500">({source.percentage}%)</span>
+                              <span className={`text-sm ${source.trend.startsWith('+') ? 'text-green-600' : source.trend.startsWith('-') ? 'text-red-600' : 'text-gray-600'}`}>
+                                {source.trend}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600">{source.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Top Performing Events */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Performing Events</h3>
+                    <div className="space-y-3">
+                      {selectedDashboardItem.expandedData.topPerformers.map((performer: any, index: number) => (
+                        <div key={index} className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200">
+                          <div>
+                            <span className="font-medium text-gray-900">{performer.name}</span>
+                            <span className="text-sm text-gray-500 block">{new Date(performer.date).toLocaleDateString()}</span>
+                          </div>
+                          <span className="font-semibold text-blue-600">{performer.leads} leads</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {selectedDashboardItem.id === 'follow-ups' && (
+                <>
+                  {/* Today's Follow-ups */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Today's Follow-ups</h3>
+                    <div className="space-y-3">
+                      {selectedDashboardItem.expandedData.todayFollowUps.map((followUp: any) => (
+                        <div key={followUp.id} className="bg-white p-4 rounded-lg border border-gray-200">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h4 className="font-semibold text-gray-900">{followUp.leadName}</h4>
+                              <p className="text-sm text-gray-600">{followUp.notes}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                followUp.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {followUp.priority}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-sm text-gray-600">
+                            <span className="flex items-center">
+                              {followUp.type === 'Call' ? <FiPhone className="w-4 h-4 mr-1" /> :
+                               followUp.type === 'Email' ? <FiMail className="w-4 h-4 mr-1" /> :
+                               <FiCalendar className="w-4 h-4 mr-1" />}
+                              {followUp.type}
+                            </span>
+                            <span>{followUp.time}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Overdue Follow-ups */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Overdue Follow-ups</h3>
+                    <div className="space-y-3">
+                      {selectedDashboardItem.expandedData.overdueFollowUps.map((followUp: any) => (
+                        <div key={followUp.id} className="bg-red-50 p-4 rounded-lg border border-red-200">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h4 className="font-semibold text-gray-900">{followUp.leadName}</h4>
+                              <p className="text-sm text-gray-600">{followUp.notes}</p>
+                            </div>
+                            <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded-full">
+                              {followUp.daysOverdue} day{followUp.daysOverdue > 1 ? 's' : ''} overdue
+                            </span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            {followUp.type === 'Call' ? <FiPhone className="w-4 h-4 mr-1" /> : <FiMail className="w-4 h-4 mr-1" />}
+                            {followUp.type}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {selectedDashboardItem.id === 'communications' && (
+                <>
+                  {/* Communication Summary */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Communication Summary</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-white p-3 rounded-lg border border-gray-200 text-center">
+                        <div className="text-2xl font-bold text-blue-600">{selectedDashboardItem.expandedData.summary.emails}</div>
+                        <div className="text-sm text-gray-600">Emails</div>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-gray-200 text-center">
+                        <div className="text-2xl font-bold text-green-600">{selectedDashboardItem.expandedData.summary.calls}</div>
+                        <div className="text-sm text-gray-600">Calls</div>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-gray-200 text-center">
+                        <div className="text-2xl font-bold text-purple-600">{selectedDashboardItem.expandedData.summary.meetings}</div>
+                        <div className="text-sm text-gray-600">Meetings</div>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-gray-200 text-center">
+                        <div className="text-2xl font-bold text-orange-600">{selectedDashboardItem.expandedData.summary.texts}</div>
+                        <div className="text-sm text-gray-600">Texts</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent Activity */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                    <div className="space-y-3">
+                      {selectedDashboardItem.expandedData.recentActivity.map((activity: any) => (
+                        <div key={activity.id} className="bg-white p-4 rounded-lg border border-gray-200">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                {activity.type === 'email' ? <FiMail className="w-4 h-4 text-blue-500" /> :
+                                 activity.type === 'call' ? <FiPhone className="w-4 h-4 text-green-500" /> :
+                                 <FiCalendar className="w-4 h-4 text-purple-500" />}
+                                <span className="font-medium text-gray-900">{activity.leadName}</span>
+                              </div>
+                              <p className="text-sm text-gray-600">
+                                {activity.subject || `${activity.duration} call`}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                activity.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                activity.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                                activity.status === 'opened' ? 'bg-purple-100 text-purple-700' :
+                                'bg-orange-100 text-orange-700'
+                              }`}>
+                                {activity.status}
+                              </span>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {new Date(activity.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Response Rates */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Response Rates</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Email Response Rate</span>
+                        <span className="font-semibold">{selectedDashboardItem.expandedData.responseRates.email}%</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Call Success Rate</span>
+                        <span className="font-semibold">{selectedDashboardItem.expandedData.responseRates.call}%</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Text Response Rate</span>
+                        <span className="font-semibold">{selectedDashboardItem.expandedData.responseRates.text}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Modal Footer */}
@@ -1423,6 +1955,196 @@ const Sales: React.FC = () => {
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Column Management Modal */}
+      {showColumnModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Add New Column</h2>
+              <button
+                onClick={() => {
+                  setShowColumnModal(false);
+                  setNewColumnTitle('');
+                  setNewColumnColor('bg-blue-500');
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <FiX className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Column Title</label>
+                <input
+                  type="text"
+                  value={newColumnTitle}
+                  onChange={(e) => setNewColumnTitle(e.target.value)}
+                  placeholder="Enter column title..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddColumn();
+                    }
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Column Color</label>
+                <div className="grid grid-cols-6 gap-2">
+                  {[
+                    'bg-blue-500',
+                    'bg-green-500',
+                    'bg-yellow-500',
+                    'bg-red-500',
+                    'bg-purple-500',
+                    'bg-pink-500',
+                    'bg-indigo-500',
+                    'bg-orange-500',
+                    'bg-teal-500',
+                    'bg-cyan-500',
+                    'bg-gray-500',
+                    'bg-emerald-500'
+                  ].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setNewColumnColor(color)}
+                      className={`w-8 h-8 ${color} rounded-lg border-2 transition-all ${
+                        newColumnColor === color ? 'border-gray-800 scale-110' : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Preview</h4>
+                <div className="bg-white border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-gray-900 text-sm">
+                      {newColumnTitle || 'Column Title'}
+                    </span>
+                    <span className={`text-xs text-white px-2 py-1 rounded-full ${newColumnColor}`}>
+                      0
+                    </span>
+                  </div>
+                  <div className={`h-1 ${newColumnColor} rounded`}></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowColumnModal(false);
+                  setNewColumnTitle('');
+                  setNewColumnColor('bg-blue-500');
+                }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddColumn}
+                disabled={!newColumnTitle.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Column
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Column with Lead Migration Modal */}
+      {showDeleteModal && columnToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Delete Column</h2>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setColumnToDelete(null);
+                  setMigrationTarget('');
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <FiX className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-center space-x-3 text-orange-600 bg-orange-50 p-3 rounded-lg">
+                <FiUsers className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm">
+                  This column contains {leadsData.filter(lead => lead.status === columnToDelete).length} lead(s).
+                  Where should these leads be moved?
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Move leads to:
+                </label>
+                <select
+                  value={migrationTarget}
+                  onChange={(e) => setMigrationTarget(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {kanbanStages
+                    .filter(stage => stage.id !== columnToDelete)
+                    .map((stage) => (
+                      <option key={stage.id} value={stage.id}>
+                        {stage.title}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Leads to be moved:</h4>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {leadsData
+                    .filter(lead => lead.status === columnToDelete)
+                    .map((lead) => (
+                      <div key={lead.id} className="text-sm text-gray-600 bg-white p-2 rounded border">
+                        {lead.name} - {lead.parentName}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setColumnToDelete(null);
+                  setMigrationTarget('');
+                }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete Column & Move Leads
               </button>
             </div>
           </div>

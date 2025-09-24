@@ -7,6 +7,8 @@ import Students from './sections/HR-Management/Students.tsx';
 import Finance from './sections/Finance';
 import Sales from './sections/Sales';
 import EmailTemplates from './sections/sales/EmailTemplates';
+import ProfileSettings from './sections/ProfileSettings';
+import Settings from './sections/settings/Settings';
 import { FiMenu, FiBell, FiSearch, FiUser, FiLogOut } from 'react-icons/fi';
 import Staff from "./sections/HR-Management/Staff.tsx";
 import Documents from "./sections/HR-Management/Documents.tsx";
@@ -27,7 +29,8 @@ const Layout: React.FC<LayoutProps> = () => {
   };
 
   const handleProfileClick = () => {
-    navigate('/auth');
+    setActiveSection('profile-settings');
+    setShowUserMenu(false);
   };
 
   const handleLogout = () => {
@@ -64,6 +67,10 @@ const Layout: React.FC<LayoutProps> = () => {
         return <Sales />;
       case 'email-templates':
         return <EmailTemplates />;
+      case 'profile-settings':
+        return <ProfileSettings />;
+      case 'settings':
+        return <Settings />;
       default:
         return <Dashboard />;
     }

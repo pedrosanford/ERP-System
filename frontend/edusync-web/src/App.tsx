@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ModuleProvider } from './context/ModuleContext';
 import Layout from './components/Layout';
 import AuthPage from './pages/AuthPage';
 import Dashboard from "./pages/Dashboard.tsx";
@@ -38,7 +39,8 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <ModuleProvider>
+        <Router>
         <Routes>
           <Route 
             path="/auth" 
@@ -61,7 +63,8 @@ function App() {
 
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-      </Router>
+        </Router>
+      </ModuleProvider>
     </AuthProvider>
   );
 }

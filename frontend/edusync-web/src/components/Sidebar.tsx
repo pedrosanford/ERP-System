@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import { useModules } from '../context/ModuleContext';
 import {
     FiHome,
     FiUsers,
@@ -147,9 +148,18 @@ const navigationItems: NavItem[] = [
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSectionChange}) => {
+    const { enabledModules } = useModules();
+    
+    // Filter navigation items based on enabled modules
+    const filteredNavigationItems = navigationItems.filter(item => {
+        // Always show dashboard and settings
+        if (item.id === 'dashboard' || item.id === 'settings') return true;
+        // Show other items only if they're enabled
+        return enabledModules.includes(item.id);
+    });
     const [expandedItems, setExpandedItems] = useState<string[]>(() => {
         // Автоматически раскрываем родительский элемент, если активная секция является дочерней
-        const parentItem = navigationItems.find(item =>
+        const parentItem = filteredNavigationItems.find(item =>
             item.children?.some(child => child.id === activeSection)
         );
         return parentItem ? [parentItem.id] : [];
@@ -213,7 +223,7 @@ const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSec
 
                 {/* Navigation */}
                 <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-                    {navigationItems.map((item) => (
+                    {filteredNavigationItems.map((item) => (
                         <div key={item.id} className="space-y-1">
                             {/* Main navigation item */}
                             <button

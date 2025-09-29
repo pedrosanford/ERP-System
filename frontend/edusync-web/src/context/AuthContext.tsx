@@ -50,8 +50,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      // Simulate API call - replace with actual API endpoint
-      const response = await fetch('/api/auth/login', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8086';
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,53 +59,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         const userData: User = {
-          id: data.user.id || '1',
-          email: data.user.email || email,
-          name: data.user.name || 'Pedro Sanford',
-          role: data.user.role || 'admin',
+          id: data.id.toString(),
+          email: data.email,
+          name: data.name,
+          role: data.role,
         };
 
-        localStorage.setItem('token', data.token || 'mock-token');
+        localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
         return { success: true };
       } else {
-        // For demo purposes, allow login with any credentials
-        const userData: User = {
-          id: '1',
-          email: email,
-          name: 'Pedro Sanford',
-          role: 'admin',
-        };
-
-        localStorage.setItem('token', 'mock-token');
-        localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
-        return { success: true };
+        return { success: false, message: data.message || 'Login failed' };
       }
     } catch (error) {
-      // For demo purposes, allow login with any credentials
-      const userData: User = {
-        id: '1',
-        email: email,
-        name: 'Pedro Sanford',
-        role: 'admin',
-      };
-
-      localStorage.setItem('token', 'mock-token');
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-      return { success: true };
+      console.error('Login error:', error);
+      return { success: false, message: 'Network error. Please try again.' };
     }
   };
 
   const register = async (email: string, password: string, name: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      // Simulate API call - replace with actual API endpoint
-      const response = await fetch('/api/auth/register', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8086';
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,24 +93,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ email, password, name }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         const userData: User = {
-          id: data.user.id || '1',
-          email: data.user.email || email,
-          name: data.user.name || name,
-          role: data.user.role || 'user',
+          id: data.id.toString(),
+          email: data.email,
+          name: data.name,
+          role: data.role,
         };
 
-        localStorage.setItem('token', data.token || 'mock-token');
+        localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
         return { success: true };
       } else {
-        return { success: false, message: 'Registration failed' };
+        return { success: false, message: data.message || 'Registration failed' };
       }
     } catch (error) {
-      return { success: false, message: 'Registration failed' };
+      console.error('Register error:', error);
+      return { success: false, message: 'Network error. Please try again.' };
     }
   };
 

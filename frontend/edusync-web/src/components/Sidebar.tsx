@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import { useModules } from '../context/ModuleContext';
+import { useAuth } from '../context/AuthContext';
 import {
     FiHome,
     FiUsers,
@@ -15,7 +16,8 @@ import {
     FiBarChart,
     FiPieChart,
     FiFile,
-    FiTrendingUp
+    FiTrendingUp,
+    FiUser
 } from 'react-icons/fi';
 import EduSyncLogo from './EduSyncLogo';
 import {AiFillMoneyCollect} from 'react-icons/ai';
@@ -49,6 +51,12 @@ const navigationItems: NavItem[] = [
         icon: <FiDollarSign className="w-5 h-5"/>,
         path: '/finance',
         children: [
+            {
+                id: 'finance-dashboard',
+                label: 'Dashboard',
+                icon: <FiBarChart className="w-4 h-4"/>,
+                path: '/finance'
+            },
             {
                 id: 'finance-transactions',
                 label: 'Recent Transactions',
@@ -149,6 +157,7 @@ const navigationItems: NavItem[] = [
 
 const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSectionChange}) => {
     const { enabledModules } = useModules();
+    const { user, logout } = useAuth();
     
     // Filter navigation items based on enabled modules
     const filteredNavigationItems = navigationItems.filter(item => {
@@ -183,14 +192,17 @@ const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSec
         return false;
     };
 
-    // Автоматически раскрываем Finance, если активна любая из его дочерних секций
+    // Автоматически раскрываем родительские секции, если активна любая из их дочерних секций
     useEffect(() => {
-        if (activeSection.startsWith('finance-')) {
+        const parentItem = filteredNavigationItems.find(item =>
+            item.children?.some(child => child.id === activeSection)
+        );
+        if (parentItem) {
             setExpandedItems(prev =>
-                prev.includes('finance') ? prev : [...prev, 'finance']
+                prev.includes(parentItem.id) ? prev : [...prev, parentItem.id]
             );
         }
-    }, [activeSection]);
+    }, [activeSection, filteredNavigationItems]);
     return (
         <>
             {/* Mobile overlay */}
@@ -209,15 +221,15 @@ const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSec
         w-64 border-r border-gray-200 flex flex-col
       `}>
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                    <EduSyncLogo size="lg" showText={true}/>
+                <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200">
+                    <EduSyncLogo size="md" showText={true}/>
 
                     {/* Close button for mobile */}
                     <button
                         onClick={onToggle}
-                        className="lg:hidden p-2 rounded-md hover:bg-gray-100 transition-colors"
+                        className="lg:hidden p-1.5 rounded-md hover:bg-gray-100 transition-colors"
                     >
-                        <FiX className="w-5 h-5 text-gray-600"/>
+                        <FiX className="w-4 h-4 text-gray-600"/>
                     </button>
                 </div>
 
@@ -229,13 +241,8 @@ const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSec
                             <button
                                 onClick={() => {
                                     if (item.children) {
-                                        // Для Finance сразу переключаемся на основной дашборд И раскрываем список
-                                        if (item.id === 'finance') {
-                                            onSectionChange('finance');
-                                            toggleExpanded(item.id);
-                                        } else {
-                                            toggleExpanded(item.id);
-                                        }
+                                        // Для всех секций с подменю - просто раскрываем/скрываем
+                                        toggleExpanded(item.id);
                                     } else {
                                         onSectionChange(item.id);
                                     }
@@ -308,19 +315,44 @@ const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSec
                 </nav>
 
                 {/* User section */}
-                <div className="p-4 border-t border-gray-200 mt-auto">
-                    <div
-                        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                <div className="p-3 border-t border-gray-200 mt-auto">
+                    <div className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                        {/* Profile Avatar/Icon */}
                         <div
-                            className="w-10 h-10 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center">
-                            <span className="text-white font-medium text-sm">PS</span>
+                            className="w-8 h-8 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center cursor-pointer"
+                            onClick={() => onSectionChange('profile-settings')}
+                            title="Click to open Profile Settings"
+                        >
+                            {user ? (
+                                <span className="text-white font-medium text-xs">
+                                    {user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                                </span>
+                            ) : (
+                                <FiUser className="w-4 h-4 text-white"/>
+                            )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">Pedro Sanford</p>
-                            <p className="text-xs text-gray-500 truncate">Administrator</p>
+                        
+                        {/* User Info */}
+                        <div 
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => onSectionChange('profile-settings')}
+                            title="Click to open Profile Settings"
+                        >
+                            <p className="text-xs font-medium text-gray-900 truncate">
+                                {user?.name || 'User'}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                                {user?.role || 'User'}
+                            </p>
                         </div>
-                        <button className="p-2 rounded-md hover:bg-gray-100 transition-colors">
-                            <FiLogOut className="w-4 h-4 text-gray-500"/>
+                        
+                        {/* Logout Button */}
+                        <button 
+                            onClick={logout}
+                            className="p-1.5 rounded-md hover:bg-red-50 hover:text-red-600 transition-colors"
+                            title="Logout"
+                        >
+                            <FiLogOut className="w-3.5 h-3.5 text-gray-500 hover:text-red-600"/>
                         </button>
                     </div>
                 </div>

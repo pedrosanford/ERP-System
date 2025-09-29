@@ -5,6 +5,7 @@ import { ModuleProvider } from './context/ModuleContext';
 import Layout from './components/Layout';
 import AuthPage from './pages/AuthPage';
 import Dashboard from "./pages/Dashboard.tsx";
+import AuthTest from './components/AuthTest';
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -61,6 +62,7 @@ function App() {
                 }
             />
 
+            <Route path="/test" element={<AuthTest />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
         </Router>

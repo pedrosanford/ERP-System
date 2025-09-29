@@ -54,6 +54,8 @@ const Layout: React.FC<LayoutProps> = () => {
         return <Documents />;
       case 'staff evaluation':
         return <StaffEvaluation />;
+      case 'finance-dashboard':
+        return <Finance activeSection="finance" />;
       case 'finance':
       case 'finance-transactions':
       case 'finance-analytics':
@@ -104,13 +106,13 @@ const Layout: React.FC<LayoutProps> = () => {
       <div className="lg:ml-64">
         {/* Top header */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
-          <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center justify-between px-6 py-3">
             {/* Mobile menu button */}
             <button
               onClick={toggleSidebar}
-              className="lg:hidden p-2 rounded-md hover:bg-gray-100 transition-colors"
+              className="lg:hidden p-1.5 rounded-md hover:bg-gray-100 transition-colors"
             >
-              <FiMenu className="w-5 h-5 text-gray-600" />
+              <FiMenu className="w-4 h-4 text-gray-600" />
             </button>
 
             {/* Search bar */}
@@ -126,20 +128,20 @@ const Layout: React.FC<LayoutProps> = () => {
             </div>
 
             {/* Right side actions */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               {/* Notifications */}
-              <button className="relative p-2 rounded-md hover:bg-gray-100 transition-colors">
-                <FiBell className="w-5 h-5 text-gray-600" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              <button className="relative p-1.5 rounded-md hover:bg-gray-100 transition-colors">
+                <FiBell className="w-4 h-4 text-gray-600" />
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
               </button>
 
               {/* User avatar */}
               <div className="relative" ref={userMenuRef}>
                 <div 
-                  className="w-8 h-8 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center cursor-pointer hover:shadow-md transition-shadow"
+                  className="w-7 h-7 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => setShowUserMenu(!showUserMenu)}
                 >
-                  <span className="text-white font-medium text-sm">
+                  <span className="text-white font-medium text-xs">
                     {user ? user.name.split(' ').map(n => n[0]).join('') : 'PS'}
                   </span>
                 </div>

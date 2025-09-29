@@ -2,6 +2,28 @@
 
 A comprehensive Educational Resource Planning (ERP) system built with microservices architecture.
 
+## 🚀 Quick Start
+
+### For New Team Members
+See [SETUP_FOR_COLLEAGUES.md](./SETUP_FOR_COLLEAGUES.md) for detailed setup instructions.
+
+### Quick Setup
+```bash
+# 1. Start backend services
+./start-auth-system.sh
+
+# 2. Start frontend
+cd frontend/edusync-web
+npm install
+npm run dev
+```
+
+### Access Points
+- **Frontend:** http://localhost:5173
+- **Auth Service:** http://localhost:8086
+- **API Gateway:** http://localhost:8080
+- **Eureka Dashboard:** http://localhost:8761
+
 ## Project Structure
 
 ```

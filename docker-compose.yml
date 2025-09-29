@@ -40,6 +40,7 @@ services:
       - edusync-student
       - edusync-sales
       - edusync-academics
+      - edusync-auth
 
   # Finance Service
   edusync-finance:
@@ -106,6 +107,21 @@ services:
     build: ./services/edusync-academics
     ports:
       - "8085:8085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/edusync_erp
+      - SPRING_DATASOURCE_USERNAME=edusync
+      - SPRING_DATASOURCE_PASSWORD=password
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka:8761/eureka
+    depends_on:
+      - postgres
+      - eureka
+
+  # Auth Service
+  edusync-auth:
+    build: ./services/edusync-auth
+    ports:
+      - "8086:8086"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/edusync_erp

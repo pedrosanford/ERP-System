@@ -1,14 +1,15 @@
 // Staff.tsx
 import React, { useState } from 'react';
-import { 
-    FaUserTie, 
-    FaEnvelope, 
-    FaPhone, 
-    FaGraduationCap, 
+import {
+    FaEnvelope,
+    FaPhone,
+    FaGraduationCap,
     FaBuilding,
     FaFilter,
-    FaSearch
+    FaSearch, FaPlus,
 } from 'react-icons/fa';
+import {FiUsers} from "react-icons/fi";
+import AddStaffDialog from './AddStaffDialog';
 
 interface StaffMember {
     id: number;
@@ -29,6 +30,9 @@ interface StaffMember {
 const Staff: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDepartment, setFilterDepartment] = useState('All');
+    // Add these new state variables
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
 
     const staffData: StaffMember[] = [
         {
@@ -135,17 +139,28 @@ const Staff: React.FC = () => {
 
     return (
         <div className="p-6 max-w-7xl mx-auto">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                    <FaUserTie /> Staff Directory
-                </h1>
+            <div className="mb-6 flex justify-between items-center">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
+                        <FiUsers className="w-6 h-6 text-primary-600" />
+                        <span>Staff</span>
+                    </h1>
+                    <p className="text-gray-600">Manage Staff Information</p>
+                </div>
+                <button
+                    onClick={() => setIsDialogOpen(true)}
+                    className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center gap-2"
+                >
+                    <FaPlus className="w-4 h-4" />
+                    Add Staff Member
+                </button>
             </div>
 
             {/* Search and Filter Section */}
             <div className="mb-6 flex flex-wrap gap-4">
                 <div className="flex-1 min-w-[300px]">
                     <div className="relative">
-                        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"/>
                         <input
                             type="text"
                             placeholder="Search staff..."
@@ -156,7 +171,7 @@ const Staff: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <FaFilter className="text-gray-400" />
+                    <FaFilter className="text-gray-400"/>
                     <select
                         className="border rounded-lg px-4 py-2"
                         value={filterDepartment}
@@ -180,8 +195,8 @@ const Staff: React.FC = () => {
                             </div>
                             <span className={`px-3 py-1 rounded-full text-sm ${
                                 staff.status === 'Active' ? 'bg-green-100 text-green-800' :
-                                staff.status === 'On Leave' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-blue-100 text-blue-800'
+                                    staff.status === 'On Leave' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-blue-100 text-blue-800'
                             }`}>
                                 {staff.status}
                             </span>
@@ -189,19 +204,19 @@ const Staff: React.FC = () => {
 
                         <div className="space-y-3">
                             <div className="flex items-center gap-2 text-gray-600">
-                                <FaBuilding className="w-4 h-4" />
+                                <FaBuilding className="w-4 h-4"/>
                                 <span>{staff.department}</span>
                             </div>
                             <div className="flex items-center gap-2 text-gray-600">
-                                <FaEnvelope className="w-4 h-4" />
+                                <FaEnvelope className="w-4 h-4"/>
                                 <span>{staff.email}</span>
                             </div>
                             <div className="flex items-center gap-2 text-gray-600">
-                                <FaPhone className="w-4 h-4" />
+                                <FaPhone className="w-4 h-4"/>
                                 <span>{staff.phone}</span>
                             </div>
                             <div className="flex items-center gap-2 text-gray-600">
-                                <FaGraduationCap className="w-4 h-4" />
+                                <FaGraduationCap className="w-4 h-4"/>
                                 <span>{staff.education}</span>
                             </div>
                         </div>
@@ -211,7 +226,8 @@ const Staff: React.FC = () => {
                                 <h3 className="font-semibold mb-2">Courses</h3>
                                 <div className="flex flex-wrap gap-2">
                                     {staff.courses.map((course, index) => (
-                                        <span key={index} className="bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded">
+                                        <span key={index}
+                                              className="bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded">
                                             {course}
                                         </span>
                                     ))}
@@ -230,6 +246,11 @@ const Staff: React.FC = () => {
                     </div>
                 ))}
             </div>
+            <AddStaffDialog
+                isOpen={isDialogOpen}
+                onClose={() => setIsDialogOpen(false)}
+            />
+
         </div>
     );
 };

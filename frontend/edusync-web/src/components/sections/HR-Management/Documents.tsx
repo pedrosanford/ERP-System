@@ -218,11 +218,7 @@ const Documents: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="flex justify-between pt-4 border-t">
-                  <button className="text-primary-600 hover:text-primary-800 flex items-center space-x-1">
-                    <FiEye className="w-4 h-4" />
-                    <span>Preview</span>
-                  </button>
+                <div className="flex justify-end pt-4 border-t">
                   <button
                       onClick={() => handlePreview(doc)}
                       className="text-primary-600 hover:text-primary-800 flex items-center space-x-1"

@@ -8,7 +8,6 @@ import {
   FiPhone,
   FiMapPin,
   FiEdit2,
-  FiEye
 } from 'react-icons/fi';
 
 interface Student {
@@ -40,7 +39,14 @@ const Students: React.FC = () => {
     name: '',
     email: '',
     program: '',
+    phone: '',
+    address: '',
+    status: 'Active' as Student['status'],
   });
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -167,9 +173,34 @@ const Students: React.FC = () => {
     setIsDialogOpen(true);
   }
 
+  function handleEditStudent(student: Student) {
+    setEditingStudent(student);
+    setFormData({
+      name: student.name,
+      email: student.email,
+      program: student.program,
+      phone: student.phone,
+      address: student.address,
+      status: student.status,
+    });
+    setIsEditDialogOpen(true);
+  }
+
+
   function handleClose() {
     setIsDialogOpen(false);
+    setIsEditDialogOpen(false);
+    setEditingStudent(null);
+    setFormData({
+      name: '',
+      email: '',
+      program: '',
+      phone: '',
+      address: '',
+      status: 'Active',
+    });
   }
+
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setFormData({
@@ -180,10 +211,16 @@ const Students: React.FC = () => {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    console.log('New Student:', formData);
-    setIsDialogOpen(false);
-    setFormData({ name: '', email: '', program: '' });
+    if (editingStudent) {
+      console.log('Updated Student:', { ...editingStudent, ...formData });
+      // Here you would typically make an API call to update the student
+    } else {
+      console.log('New Student:', formData);
+      // Here you would typically make an API call to create the student
+    }
+    handleClose();
   }
+
 
   return (
       <div className="space-y-6">
@@ -314,14 +351,13 @@ const Students: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t flex justify-between">
-                  <button className="text-primary-600 hover:text-primary-800 flex items-center space-x-1">
+                <div className="mt-4 pt-4 border-t flex justify-end">
+                  <button
+                      onClick={() => handleEditStudent(student)}
+                      className="text-primary-600 hover:text-primary-800 flex items-center space-x-1"
+                  >
                     <FiEdit2 className="w-4 h-4" />
                     <span>Edit</span>
-                  </button>
-                  <button className="text-gray-600 hover:text-gray-800 flex items-center space-x-1">
-                    <FiEye className="w-4 h-4" />
-                    <span>View Details</span>
                   </button>
                 </div>
               </div>
@@ -385,6 +421,98 @@ const Students: React.FC = () => {
               </div>
             </div>
         )}
+          {isEditDialogOpen && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+                  <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+                      <h2 className="text-xl font-semibold text-gray-900 mb-4">Edit Student</h2>
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                          <div>
+                              <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                              <input
+                                  type="text"
+                                  name="name"
+                                  value={formData.name}
+                                  onChange={handleChange}
+                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                  required
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-sm font-medium text-gray-700">Email</label>
+                              <input
+                                  type="email"
+                                  name="email"
+                                  value={formData.email}
+                                  onChange={handleChange}
+                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                  required
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-sm font-medium text-gray-700">Program</label>
+                              <input
+                                  type="text"
+                                  name="program"
+                                  value={formData.program}
+                                  onChange={handleChange}
+                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                  required
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-sm font-medium text-gray-700">Phone</label>
+                              <input
+                                  type="text"
+                                  name="phone"
+                                  value={formData.phone}
+                                  onChange={handleChange}
+                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                  required
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-sm font-medium text-gray-700">Address</label>
+                              <input
+                                  type="text"
+                                  name="address"
+                                  value={formData.address}
+                                  onChange={handleChange}
+                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                  required
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-sm font-medium text-gray-700">Status</label>
+                              <select
+                                  name="status"
+                                  value={formData.status}
+                                  onChange={(e) => setFormData({...formData, status: e.target.value as Student['status']})}
+                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              >
+                                  <option value="Active">Active</option>
+                                  <option value="Inactive">Inactive</option>
+                                  <option value="Suspended">Suspended</option>
+                              </select>
+                          </div>
+                          <div className="flex justify-end space-x-3 pt-4">
+                              <button
+                                  type="button"
+                                  onClick={handleClose}
+                                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                              >
+                                  Cancel
+                              </button>
+                              <button
+                                  type="submit"
+                                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                              >
+                                  Save Changes
+                              </button>
+                          </div>
+                      </form>
+                  </div>
+              </div>
+          )}
       </div>
   );
 };

@@ -52,46 +52,28 @@ const navigationItems: NavItem[] = [
         path: '/finance',
         children: [
             {
-                id: 'finance-dashboard',
-                label: 'Dashboard',
-                icon: <FiBarChart className="w-4 h-4"/>,
-                path: '/finance'
-            },
-            {
-                id: 'finance-transactions',
-                label: 'Recent Transactions',
+                id: 'finance-tuition',
+                label: 'Tuition & Fees',
                 icon: <FiDollarSign className="w-4 h-4"/>,
-                path: '/finance/transactions'
+                path: '/finance/tuition'
             },
             {
-                id: 'finance-analytics',
-                label: 'Financial Analytics',
-                icon: <FiBarChart className="w-4 h-4"/>,
-                path: '/finance/analytics'
-            },
-            {
-                id: 'finance-payments',
-                label: 'Payment Processing',
-                icon: <FiCreditCard className="w-4 h-4"/>,
-                path: '/finance/payments'
-            },
-            {
-                id: 'finance-invoices',
-                label: 'Invoice Management',
+                id: 'finance-scholarships',
+                label: 'Scholarships',
                 icon: <FiFileText className="w-4 h-4"/>,
-                path: '/finance/invoices'
+                path: '/finance/scholarships'
             },
             {
-                id: 'finance-reports',
-                label: 'Financial Reports',
-                icon: <FiPieChart className="w-4 h-4"/>,
-                path: '/finance/reports'
+                id: 'finance-salaries',
+                label: 'Salaries & Payroll',
+                icon: <FiUsers className="w-4 h-4"/>,
+                path: '/finance/salaries'
             },
             {
-                id: 'finance-budget',
-                label: 'Budget Management',
-                icon: <FiPieChart className="w-4 h-4"/>,
-                path: '/finance/budget'
+                id: 'finance-expenses',
+                label: 'Department Expenses',
+                icon: <FiCreditCard className="w-4 h-4"/>,
+                path: '/finance/expenses'
             }
         ]
     },

@@ -54,15 +54,11 @@ const Layout: React.FC<LayoutProps> = () => {
         return <Documents />;
       case 'staff evaluation':
         return <StaffEvaluation />;
-      case 'finance-dashboard':
-        return <Finance activeSection="finance" />;
       case 'finance':
-      case 'finance-transactions':
-      case 'finance-analytics':
-      case 'finance-payments':
-      case 'finance-invoices':
-      case 'finance-reports':
-      case 'finance-budget':
+      case 'finance-tuition':
+      case 'finance-scholarships':
+      case 'finance-salaries':
+      case 'finance-expenses':
         return <Finance activeSection={activeSection} />;
       case 'sales':
       case 'sales-pipeline':

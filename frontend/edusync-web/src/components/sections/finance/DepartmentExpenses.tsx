@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiBriefcase, FiPlus, FiEdit2, FiTrash2, FiCheck, FiX, FiAlertCircle } from 'react-icons/fi';
+import { FaSpinner } from 'react-icons/fa';
+import hrService, { type Department as DepartmentAPI, type Staff as StaffAPI } from '../../../services/hrService';
+import financeService from '../../../services/financeService';
 
 interface Expense {
   id: string;
@@ -40,6 +43,105 @@ const DepartmentExpenses: React.FC = () => {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showReimbursementModal, setShowReimbursementModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  
+  // Real departments from API
+  const [departments, setDepartments] = useState<DepartmentAPI[]>([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+  const [departmentsError, setDepartmentsError] = useState<string | null>(null);
+  
+  // Real staff members from API
+  const [staffMembers, setStaffMembers] = useState<StaffAPI[]>([]);
+  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
+  
+  // Loading states for data
+  const [isLoadingExpenses, setIsLoadingExpenses] = useState(false);
+  const [isLoadingReimbursements, setIsLoadingReimbursements] = useState(false);
+  
+  // Fetch real data on mount
+  useEffect(() => {
+    fetchDepartments();
+    fetchStaff();
+    fetchExpenses();
+    fetchReimbursements();
+  }, []);
+  
+  const fetchDepartments = async () => {
+    setIsLoadingDepartments(true);
+    setDepartmentsError(null);
+    try {
+      const depts = await hrService.getAllDepartments();
+      setDepartments(depts);
+    } catch (err: any) {
+      console.error('Failed to fetch departments:', err);
+      setDepartmentsError(err.message || 'Failed to load departments');
+    } finally {
+      setIsLoadingDepartments(false);
+    }
+  };
+  
+  const fetchStaff = async () => {
+    setIsLoadingStaff(true);
+    try {
+      const staff = await hrService.getAllStaff();
+      setStaffMembers(staff.filter(s => s.status === 'ACTIVE'));
+    } catch (err: any) {
+      console.error('Failed to fetch staff:', err);
+    } finally {
+      setIsLoadingStaff(false);
+    }
+  };
+  
+  const fetchExpenses = async () => {
+    setIsLoadingExpenses(true);
+    try {
+      const transactions = await financeService.getTransactionsByCategory('Department Expense');
+      // Transform transactions to Expense format
+      const expensesData: Expense[] = transactions.map(t => ({
+        id: t.transactionId,
+        vendor: t.reference || 'N/A',
+        amount: t.amount,
+        category: t.subCategory || t.category,
+        department: 'IT Department', // For now, we'll use the only department we have
+        date: t.date,
+        description: t.description,
+        status: t.status === 'COMPLETED' ? 'Approved by Finance' : 'Pending',
+        approvedBy: t.createdBy
+      }));
+      setExpenses(expensesData);
+    } catch (err: any) {
+      console.error('Failed to fetch expenses:', err);
+    } finally {
+      setIsLoadingExpenses(false);
+    }
+  };
+  
+  const fetchReimbursements = async () => {
+    setIsLoadingReimbursements(true);
+    try {
+      const transactions = await financeService.getTransactionsByCategory('Reimbursement');
+      const staff = await hrService.getAllStaff();
+      
+      // Transform transactions to Reimbursement format
+      const reimbursementsData: Reimbursement[] = transactions.map(t => {
+        const staffMember = staff.find(s => s.id === t.staffId);
+        return {
+          id: t.transactionId,
+          employeeName: staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Unknown Employee',
+          employeeId: staffMember?.employeeId || 'N/A',
+          amount: t.amount,
+          category: t.subCategory || t.category,
+          date: t.date,
+          description: t.description,
+          status: t.status === 'COMPLETED' ? 'Paid' : t.status === 'PENDING' ? 'Pending' : 'Approved'
+        };
+      });
+      setReimbursements(reimbursementsData);
+    } catch (err: any) {
+      console.error('Failed to fetch reimbursements:', err);
+    } finally {
+      setIsLoadingReimbursements(false);
+    }
+  };
 
   const [expenseForm, setExpenseForm] = useState({
     vendor: '',
@@ -59,89 +161,10 @@ const DepartmentExpenses: React.FC = () => {
     description: ''
   });
 
-  // Sample data
-  const [expenses, setExpenses] = useState<Expense[]>([
-    {
-      id: 'EXP-001',
-      vendor: 'ABC Office Supplies',
-      amount: 1200,
-      category: 'Supplies',
-      department: 'Academic',
-      date: '2025-10-15',
-      description: 'Classroom supplies and stationery',
-      status: 'Approved by Finance'
-    },
-    {
-      id: 'EXP-002',
-      vendor: 'Tech Solutions Inc.',
-      amount: 5000,
-      category: 'Equipment',
-      department: 'IT',
-      date: '2025-10-18',
-      description: 'Computer equipment for lab',
-      status: 'Pending'
-    },
-    {
-      id: 'EXP-003',
-      vendor: 'Sports Gear Co.',
-      amount: 800,
-      category: 'Sports',
-      department: 'Sports',
-      date: '2025-10-20',
-      description: 'Sports equipment',
-      status: 'Approved by Dept Head'
-    },
-  ]);
-
-  const [budgets, setBudgets] = useState<DepartmentBudget[]>([
-    {
-      id: 'BUD-001',
-      department: 'Academic',
-      allocatedBudget: 50000,
-      usedBudget: 28000,
-      remainingBudget: 22000,
-      expenses: 12
-    },
-    {
-      id: 'BUD-002',
-      department: 'IT',
-      allocatedBudget: 75000,
-      usedBudget: 45000,
-      remainingBudget: 30000,
-      expenses: 8
-    },
-    {
-      id: 'BUD-003',
-      department: 'Sports',
-      allocatedBudget: 25000,
-      usedBudget: 15000,
-      remainingBudget: 10000,
-      expenses: 6
-    },
-  ]);
-
-  const [reimbursements, setReimbursements] = useState<Reimbursement[]>([
-    {
-      id: 'REIMB-001',
-      employeeName: 'Dr. Sarah Johnson',
-      employeeId: 'EMP-001',
-      amount: 250,
-      category: 'Training',
-      date: '2025-10-10',
-      description: 'Professional development workshop fees',
-      status: 'Approved'
-    },
-    {
-      id: 'REIMB-002',
-      employeeName: 'Mr. John Davis',
-      employeeId: 'EMP-002',
-      amount: 180,
-      category: 'Travel',
-      date: '2025-10-12',
-      description: 'Conference travel expenses',
-      status: 'Pending'
-    },
-  ]);
+  // Real data (no mock data)
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [budgets, setBudgets] = useState<DepartmentBudget[]>([]);
+  const [reimbursements, setReimbursements] = useState<Reimbursement[]>([]);
 
   const handleAddExpense = () => {
     setEditingExpense(null);
@@ -695,17 +718,29 @@ const DepartmentExpenses: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                <select
-                  value={expenseForm.department}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, department: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">Select department</option>
-                  <option value="Academic">Academic</option>
-                  <option value="IT">IT</option>
-                  <option value="Sports">Sports</option>
-                  <option value="Administration">Administration</option>
-                </select>
+                {isLoadingDepartments ? (
+                  <div className="flex items-center justify-center py-2">
+                    <FaSpinner className="animate-spin h-5 w-5 text-primary-600" />
+                  </div>
+                ) : (
+                  <select
+                    value={expenseForm.department}
+                    onChange={(e) => setExpenseForm({ ...expenseForm, department: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="">Select department</option>
+                    {departments.map((dept: DepartmentAPI) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {departments.length === 0 && !isLoadingDepartments && (
+                  <p className="mt-1 text-sm text-red-600">
+                    No departments found. Please add departments first.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>

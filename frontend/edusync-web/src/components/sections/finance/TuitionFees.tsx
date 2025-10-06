@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { FiDollarSign, FiPlus, FiEdit2, FiTrash2, FiCheck, FiX } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiDollarSign, FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FaSpinner } from 'react-icons/fa';
+import studentService, { type Student as StudentAPI } from '../../../services/studentService';
 
 interface TuitionRule {
   id: string;
@@ -34,7 +36,11 @@ const TuitionFees: React.FC = () => {
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [editingRule, setEditingRule] = useState<TuitionRule | null>(null);
-  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  
+  // Real students from database
+  const [students, setStudents] = useState<StudentAPI[]>([]);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [studentsError, setStudentsError] = useState<string | null>(null);
 
   // Form states
   const [ruleForm, setRuleForm] = useState({
@@ -46,26 +52,41 @@ const TuitionFees: React.FC = () => {
   });
 
   const [invoiceForm, setInvoiceForm] = useState({
+    studentId: '',
     studentName: '',
     grade: '',
     amount: '',
     dueDate: ''
   });
+  
+  // Fetch real students on component mount
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+  
+  const fetchStudents = async () => {
+    setIsLoadingStudents(true);
+    setStudentsError(null);
+    try {
+      const studentsData = await studentService.getAllStudents();
+      // Only show active students
+      setStudents(studentsData.filter(s => s.status === 'ACTIVE'));
+    } catch (err: any) {
+      console.error('Failed to fetch students:', err);
+      setStudentsError(err.message || 'Failed to load students');
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  };
 
-  // Sample data
+  // Real data (no mock data)
   const [tuitionRules, setTuitionRules] = useState<TuitionRule[]>([
     { id: '1', grade: 'Grade 1', course: 'General', amount: 5000, frequency: 'Monthly', status: 'Active' },
     { id: '2', grade: 'Grade 2', course: 'General', amount: 5500, frequency: 'Monthly', status: 'Active' },
   ]);
 
-  const [invoices, setInvoices] = useState<Invoice[]>([
-    { id: 'INV-001', studentName: 'John Doe', grade: 'Grade 1', amount: 5000, dueDate: '2025-11-01', status: 'Pending' },
-    { id: 'INV-002', studentName: 'Jane Smith', grade: 'Grade 2', amount: 5500, dueDate: '2025-11-01', status: 'Paid' },
-  ]);
-
-  const [payments, setPayments] = useState<Payment[]>([
-    { id: 'PAY-001', invoiceId: 'INV-002', studentName: 'Jane Smith', amount: 5500, paymentDate: '2025-10-15', method: 'Bank Transfer', status: 'Received' },
-  ]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const payments: Payment[] = []; // Empty payments for now
 
   // Handler functions
   const handleAddRule = () => {
@@ -125,8 +146,12 @@ const TuitionFees: React.FC = () => {
   };
 
   const handleAddInvoice = () => {
-    setEditingInvoice(null);
+    if (students.length === 0) {
+      alert('No active students found. Please add students first.');
+      return;
+    }
     setInvoiceForm({
+      studentId: '',
       studentName: '',
       grade: '',
       amount: '',
@@ -134,10 +159,22 @@ const TuitionFees: React.FC = () => {
     });
     setShowInvoiceModal(true);
   };
+  
+  const handleStudentChange = (studentId: string) => {
+    const selectedStudent = students.find(s => s.id?.toString() === studentId);
+    if (selectedStudent) {
+      setInvoiceForm({
+        ...invoiceForm,
+        studentId: studentId,
+        studentName: `${selectedStudent.firstName} ${selectedStudent.lastName}`,
+        grade: selectedStudent.program || ''
+      });
+    }
+  };
 
   const handleSaveInvoice = () => {
-    if (!invoiceForm.studentName || !invoiceForm.grade || !invoiceForm.amount || !invoiceForm.dueDate) {
-      alert('Please fill in all required fields');
+    if (!invoiceForm.studentId || !invoiceForm.amount || !invoiceForm.dueDate) {
+      alert('Please fill in all required fields (Student, Amount, Due Date)');
       return;
     }
 
@@ -151,6 +188,9 @@ const TuitionFees: React.FC = () => {
     };
     setInvoices([...invoices, newInvoice]);
     setShowInvoiceModal(false);
+    
+    // Show success message
+    alert(`Invoice created successfully for ${invoiceForm.studentName}!`);
   };
 
   const renderTuitionRules = () => (
@@ -470,47 +510,94 @@ const TuitionFees: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate Invoice</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
-                <input
-                  type="text"
-                  value={invoiceForm.studentName}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, studentName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="John Doe"
-                />
+            
+            {studentsError && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                {studentsError}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
-                <input
-                  type="text"
-                  value={invoiceForm.grade}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, grade: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Grade 1"
-                />
+            )}
+            
+            {isLoadingStudents ? (
+              <div className="flex items-center justify-center py-8">
+                <FaSpinner className="animate-spin h-8 w-8 text-primary-600" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
-                <input
-                  type="number"
-                  value={invoiceForm.amount}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="5000"
-                />
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Select Student <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={invoiceForm.studentId}
+                    onChange={(e) => handleStudentChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">-- Select a student --</option>
+                    {students.map((student) => (
+                      <option key={student.id} value={student.id}>
+                        {student.firstName} {student.lastName} ({student.studentId}) - {student.program}
+                      </option>
+                    ))}
+                  </select>
+                  {students.length === 0 && (
+                    <p className="mt-1 text-sm text-red-600">
+                      No active students found. Please add students first.
+                    </p>
+                  )}
+                </div>
+                
+                {invoiceForm.studentId && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
+                      <input
+                        type="text"
+                        value={invoiceForm.studentName}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Program/Grade</label>
+                      <input
+                        type="text"
+                        value={invoiceForm.grade}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                      />
+                    </div>
+                  </>
+                )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Amount ($) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={invoiceForm.amount}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="5000"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Due Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={invoiceForm.dueDate}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    required
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                <input
-                  type="date"
-                  value={invoiceForm.dueDate}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
-            </div>
+            )}
+            
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowInvoiceModal(false)}
@@ -520,7 +607,8 @@ const TuitionFees: React.FC = () => {
               </button>
               <button
                 onClick={handleSaveInvoice}
-                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                disabled={isLoadingStudents || students.length === 0}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 Generate Invoice
               </button>

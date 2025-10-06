@@ -7,6 +7,12 @@ spring:
   cloud:
     gateway:
       routes:
+        - id: auth-service
+          uri: lb://EDUSYNC-AUTH
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
         - id: finance-service
           uri: lb://EDUSYNC-FINANCE
           predicates:
@@ -20,7 +26,7 @@ spring:
           filters:
             - StripPrefix=1
         - id: student-service
-          uri: http://edusync-student:8083
+          uri: lb://EDUSYNC-STUDENT
           predicates:
             - Path=/api/student/**
           filters:

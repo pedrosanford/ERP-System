@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { FiUsers, FiPlus, FiEdit2, FiTrash2, FiDownload, FiCheckCircle } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiUsers, FiPlus, FiEdit2, FiTrash2, FiDownload } from 'react-icons/fi';
+import { FaSpinner } from 'react-icons/fa';
+import hrService, { type Staff as StaffAPI, type Department as DepartmentAPI } from '../../../services/hrService';
+import financeService from '../../../services/financeService';
 
 interface SalaryPackage {
   id: string;
@@ -37,15 +40,101 @@ const SalariesPayroll: React.FC = () => {
   const [showSalaryModal, setShowSalaryModal] = useState(false);
   const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [editingSalary, setEditingSalary] = useState<SalaryPackage | null>(null);
+  
+  // Real data from API
+  const [staffMembers, setStaffMembers] = useState<StaffAPI[]>([]);
+  const [departments, setDepartments] = useState<DepartmentAPI[]>([]);
+  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
+  const [staffError, setStaffError] = useState<string | null>(null);
 
   const [salaryForm, setSalaryForm] = useState({
     employeeName: '',
     employeeId: '',
+    staffId: '',
     position: '',
     department: '',
     baseSalary: '',
     allowances: ''
   });
+  
+  // Fetch real staff and departments on mount
+  useEffect(() => {
+    fetchStaffAndDepartments();
+    fetchSalaryData();
+  }, []);
+  
+  const fetchStaffAndDepartments = async () => {
+    setIsLoadingStaff(true);
+    setStaffError(null);
+    try {
+      const [staffData, deptData] = await Promise.all([
+        hrService.getAllStaff(),
+        hrService.getAllDepartments()
+      ]);
+      // Only show active staff
+      setStaffMembers(staffData.filter((s: StaffAPI) => s.status === 'ACTIVE'));
+      setDepartments(deptData);
+    } catch (err: any) {
+      console.error('Failed to fetch staff/departments:', err);
+      setStaffError(err.message || 'Failed to load staff data');
+    } finally {
+      setIsLoadingStaff(false);
+    }
+  };
+  
+  const fetchSalaryData = async () => {
+    try {
+      // Fetch salary transactions from Finance API
+      const transactions = await financeService.getTransactionsByCategory('Salaries');
+      const staff = await hrService.getAllStaff();
+      const depts = await hrService.getAllDepartments();
+      
+      // Transform transactions to SalaryPackage and PayrollRecord format
+      const salaryPackagesData: SalaryPackage[] = [];
+      const payrollRecordsData: PayrollRecord[] = [];
+      
+      transactions.forEach(t => {
+        const staffMember = staff.find(s => s.id === t.staffId);
+        if (staffMember) {
+          const dept = depts.find(d => d.id === staffMember.departmentId);
+          
+          // Check if we already have a salary package for this staff member
+          const existingPackage = salaryPackagesData.find(p => p.employeeId === staffMember.employeeId);
+          if (!existingPackage) {
+            salaryPackagesData.push({
+              id: `SAL-${staffMember.id}`,
+              employeeName: `${staffMember.firstName} ${staffMember.lastName}`,
+              employeeId: staffMember.employeeId,
+              position: staffMember.position,
+              department: dept?.name || 'N/A',
+              baseSalary: t.amount,
+              allowances: 0,
+              status: 'Active'
+            });
+          }
+          
+          // Add payroll record
+          payrollRecordsData.push({
+            id: t.transactionId,
+            employeeName: `${staffMember.firstName} ${staffMember.lastName}`,
+            employeeId: staffMember.employeeId,
+            month: new Date(t.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+            baseSalary: t.amount,
+            allowances: 0,
+            deductions: 0,
+            netSalary: t.amount,
+            status: t.status === 'COMPLETED' ? 'Paid' : 'Pending',
+            paymentDate: t.date
+          });
+        }
+      });
+      
+      setSalaryPackages(salaryPackagesData);
+      setPayrollRecords(payrollRecordsData);
+    } catch (err: any) {
+      console.error('Failed to fetch salary data:', err);
+    }
+  };
 
   const [payrollForm, setPayrollForm] = useState({
     employeeId: '',
@@ -53,55 +142,9 @@ const SalariesPayroll: React.FC = () => {
     deductions: ''
   });
 
-  // Sample data
-  const [salaryPackages, setSalaryPackages] = useState<SalaryPackage[]>([
-    {
-      id: 'SAL-001',
-      employeeName: 'Dr. Sarah Johnson',
-      employeeId: 'EMP-001',
-      position: 'Mathematics Teacher',
-      department: 'Academic',
-      baseSalary: 5000,
-      allowances: 500,
-      status: 'Active'
-    },
-    {
-      id: 'SAL-002',
-      employeeName: 'Mr. John Davis',
-      employeeId: 'EMP-002',
-      position: 'Science Teacher',
-      department: 'Academic',
-      baseSalary: 4800,
-      allowances: 450,
-      status: 'Active'
-    },
-  ]);
-
-  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([
-    {
-      id: 'PAY-001',
-      employeeName: 'Dr. Sarah Johnson',
-      employeeId: 'EMP-001',
-      month: 'October 2025',
-      baseSalary: 5000,
-      allowances: 500,
-      deductions: 750,
-      netSalary: 4750,
-      status: 'Paid',
-      paymentDate: '2025-10-31'
-    },
-    {
-      id: 'PAY-002',
-      employeeName: 'Mr. John Davis',
-      employeeId: 'EMP-002',
-      month: 'October 2025',
-      baseSalary: 4800,
-      allowances: 450,
-      deductions: 720,
-      netSalary: 4530,
-      status: 'Processing'
-    },
-  ]);
+  // Real data (no mock data)
+  const [salaryPackages, setSalaryPackages] = useState<SalaryPackage[]>([]);
+  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([]);
 
   const [deductions] = useState<Deduction[]>([
     { id: 'DED-001', type: 'Tax', amount: 500, description: 'Income Tax' },
@@ -110,10 +153,15 @@ const SalariesPayroll: React.FC = () => {
   ]);
 
   const handleAddSalary = () => {
+    if (staffMembers.length === 0) {
+      alert('No active staff members found. Please add staff first.');
+      return;
+    }
     setEditingSalary(null);
     setSalaryForm({
       employeeName: '',
       employeeId: '',
+      staffId: '',
       position: '',
       department: '',
       baseSalary: '',
@@ -121,12 +169,28 @@ const SalariesPayroll: React.FC = () => {
     });
     setShowSalaryModal(true);
   };
+  
+  const handleStaffChange = (staffId: string) => {
+    const selectedStaff = staffMembers.find((s: StaffAPI) => s.id?.toString() === staffId);
+    if (selectedStaff) {
+      const dept = departments.find((d: DepartmentAPI) => d.id === selectedStaff.departmentId);
+      setSalaryForm({
+        ...salaryForm,
+        staffId: staffId,
+        employeeName: `${selectedStaff.firstName} ${selectedStaff.lastName}`,
+        employeeId: selectedStaff.employeeId,
+        position: selectedStaff.position,
+        department: dept?.name || 'Unknown'
+      });
+    }
+  };
 
   const handleEditSalary = (pkg: SalaryPackage) => {
     setEditingSalary(pkg);
     setSalaryForm({
       employeeName: pkg.employeeName,
       employeeId: pkg.employeeId,
+      staffId: '',
       position: pkg.position,
       department: pkg.department,
       baseSalary: pkg.baseSalary.toString(),
@@ -214,14 +278,6 @@ const SalariesPayroll: React.FC = () => {
 
     setPayrollRecords([...payrollRecords, newPayroll]);
     setShowPayrollModal(false);
-  };
-
-  const handleMarkAsPaid = (id: string) => {
-    setPayrollRecords(payrollRecords.map(record =>
-      record.id === id
-        ? { ...record, status: 'Paid' as 'Paid', paymentDate: new Date().toISOString().split('T')[0] }
-        : record
-    ));
   };
 
   const renderSalarySetup = () => (
@@ -559,72 +615,107 @@ const SalariesPayroll: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               {editingSalary ? 'Edit Salary Package' : 'Add Salary Package'}
             </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employee Name</label>
-                <input
-                  type="text"
-                  value={salaryForm.employeeName}
-                  onChange={(e) => setSalaryForm({ ...salaryForm, employeeName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Dr. Sarah Johnson"
-                />
+            
+            {staffError && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                {staffError}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
-                <input
-                  type="text"
-                  value={salaryForm.employeeId}
-                  onChange={(e) => setSalaryForm({ ...salaryForm, employeeId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="EMP-001"
-                />
+            )}
+            
+            {isLoadingStaff ? (
+              <div className="flex items-center justify-center py-8">
+                <FaSpinner className="animate-spin h-8 w-8 text-primary-600" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
-                <input
-                  type="text"
-                  value={salaryForm.position}
-                  onChange={(e) => setSalaryForm({ ...salaryForm, position: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Mathematics Teacher"
-                />
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Select Staff Member <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={salaryForm.staffId}
+                    onChange={(e) => handleStaffChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">-- Select a staff member --</option>
+                    {staffMembers.map((staff: StaffAPI) => (
+                      <option key={staff.id} value={staff.id}>
+                        {staff.firstName} {staff.lastName} ({staff.employeeId}) - {staff.position}
+                      </option>
+                    ))}
+                  </select>
+                  {staffMembers.length === 0 && (
+                    <p className="mt-1 text-sm text-red-600">
+                      No active staff found. Please add staff first.
+                    </p>
+                  )}
+                </div>
+                
+                {salaryForm.staffId && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Employee Name</label>
+                      <input
+                        type="text"
+                        value={salaryForm.employeeName}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
+                      <input
+                        type="text"
+                        value={salaryForm.employeeId}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                      <input
+                        type="text"
+                        value={salaryForm.position}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                      <input
+                        type="text"
+                        value={salaryForm.department}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                      />
+                    </div>
+                  </>
+                )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Base Salary ($)</label>
+                  <input
+                    type="number"
+                    value={salaryForm.baseSalary}
+                    onChange={(e) => setSalaryForm({ ...salaryForm, baseSalary: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="5000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Allowances ($)</label>
+                  <input
+                    type="number"
+                    value={salaryForm.allowances}
+                    onChange={(e) => setSalaryForm({ ...salaryForm, allowances: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="500"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                <select
-                  value={salaryForm.department}
-                  onChange={(e) => setSalaryForm({ ...salaryForm, department: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">Select department</option>
-                  <option value="Academic">Academic</option>
-                  <option value="Administration">Administration</option>
-                  <option value="IT">IT</option>
-                  <option value="Sports">Sports</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Base Salary ($)</label>
-                <input
-                  type="number"
-                  value={salaryForm.baseSalary}
-                  onChange={(e) => setSalaryForm({ ...salaryForm, baseSalary: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="5000"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Allowances ($)</label>
-                <input
-                  type="number"
-                  value={salaryForm.allowances}
-                  onChange={(e) => setSalaryForm({ ...salaryForm, allowances: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="500"
-                />
-              </div>
-            </div>
+            )}
+            
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowSalaryModal(false)}
@@ -634,7 +725,8 @@ const SalariesPayroll: React.FC = () => {
               </button>
               <button
                 onClick={handleSaveSalary}
-                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                disabled={isLoadingStaff || staffMembers.length === 0}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {editingSalary ? 'Save Changes' : 'Add Package'}
               </button>

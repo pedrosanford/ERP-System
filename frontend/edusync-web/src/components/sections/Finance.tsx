@@ -1,4 +1,5 @@
 import React from 'react';
+import FinanceOverview from './finance/FinanceOverview';
 import TuitionFees from './finance/TuitionFees';
 import ScholarshipsDiscounts from './finance/ScholarshipsDiscounts';
 import SalariesPayroll from './finance/SalariesPayroll';
@@ -21,8 +22,8 @@ const Finance: React.FC<FinanceProps> = ({ activeSection }) => {
       return <DepartmentExpenses />;
     case 'finance':
     default:
-      // Default finance dashboard - show tuition fees as the main view
-      return <TuitionFees />;
+      // Default finance dashboard - show finance overview with real data
+      return <FinanceOverview />;
   }
 };
 

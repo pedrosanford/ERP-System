@@ -12,12 +12,11 @@ import {
     FiMail,
     FiTarget,
     FiCreditCard,
-    FiFileText,
-    FiBarChart,
     FiPieChart,
     FiFile,
     FiTrendingUp,
-    FiUser
+    FiUser,
+    FiAward
 } from 'react-icons/fi';
 import EduSyncLogo from './EduSyncLogo';
 import {AiFillMoneyCollect} from 'react-icons/ai';
@@ -52,6 +51,12 @@ const navigationItems: NavItem[] = [
         path: '/finance',
         children: [
             {
+                id: 'finance',
+                label: 'Finance Overview',
+                icon: <FiPieChart className="w-4 h-4"/>,
+                path: '/finance'
+            },
+            {
                 id: 'finance-tuition',
                 label: 'Tuition & Fees',
                 icon: <FiDollarSign className="w-4 h-4"/>,
@@ -60,7 +65,7 @@ const navigationItems: NavItem[] = [
             {
                 id: 'finance-scholarships',
                 label: 'Scholarships',
-                icon: <FiFileText className="w-4 h-4"/>,
+                icon: <FiAward className="w-4 h-4"/>,
                 path: '/finance/scholarships'
             },
             {
@@ -203,16 +208,18 @@ const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSec
         w-64 border-r border-gray-200 flex flex-col
       `}>
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200">
-                    <EduSyncLogo size="md" showText={true}/>
+                <div className="bg-white shadow-sm border-b border-gray-200">
+                    <div className="flex items-center justify-between px-6 h-16">
+                        <EduSyncLogo size="md" showText={true}/>
 
-                    {/* Close button for mobile */}
-                    <button
-                        onClick={onToggle}
-                        className="lg:hidden p-1.5 rounded-md hover:bg-gray-100 transition-colors"
-                    >
-                        <FiX className="w-4 h-4 text-gray-600"/>
-                    </button>
+                        {/* Close button for mobile */}
+                        <button
+                            onClick={onToggle}
+                            className="lg:hidden p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                        >
+                            <FiX className="w-4 h-4 text-gray-600"/>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Navigation */}

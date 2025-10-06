@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiAward, FiPlus, FiEdit2, FiTrash2, FiTrendingUp } from 'react-icons/fi';
+import { FaSpinner } from 'react-icons/fa';
+import studentService, { type Student as StudentAPI } from '../../../services/studentService';
 
 interface Scholarship {
   id: string;
@@ -26,6 +28,9 @@ const ScholarshipsDiscounts: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'scholarships' | 'adjustments' | 'monitoring'>('scholarships');
   const [showScholarshipModal, setShowScholarshipModal] = useState(false);
   const [editingScholarship, setEditingScholarship] = useState<Scholarship | null>(null);
+  
+  const [students, setStudents] = useState<StudentAPI[]>([]);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
   const [scholarshipForm, setScholarshipForm] = useState({
     studentName: '',
@@ -36,32 +41,24 @@ const ScholarshipsDiscounts: React.FC = () => {
     startDate: '',
     endDate: ''
   });
+  
+  useEffect(() => {
+    const fetchStudents = async () => {
+      setIsLoadingStudents(true);
+      try {
+        const data = await studentService.getAllStudents();
+        setStudents(data.filter(s => s.status === 'ACTIVE'));
+      } catch (err) {
+        console.error('Failed to fetch students:', err);
+      } finally {
+        setIsLoadingStudents(false);
+      }
+    };
+    fetchStudents();
+  }, []);
 
-  // Sample data
-  const [scholarships, setScholarships] = useState<Scholarship[]>([
-    {
-      id: 'SCH-001',
-      studentName: 'John Doe',
-      grade: 'Grade 10',
-      scholarshipType: 'Merit-Based',
-      amount: 2000,
-      percentage: 40,
-      status: 'Active',
-      startDate: '2025-09-01',
-      endDate: '2026-06-30'
-    },
-    {
-      id: 'SCH-002',
-      studentName: 'Jane Smith',
-      grade: 'Grade 11',
-      scholarshipType: 'Need-Based',
-      amount: 3000,
-      percentage: 60,
-      status: 'Active',
-      startDate: '2025-09-01',
-      endDate: '2026-06-30'
-    },
-  ]);
+  // Real data (no mock)
+  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
 
   const [funds, setFunds] = useState<ScholarshipFund[]>([
     {

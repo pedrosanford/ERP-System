@@ -7,8 +7,9 @@ import {
   FiMail,
   FiPhone,
   FiMapPin,
-  FiEdit2,
 } from 'react-icons/fi';
+import { FaSpinner } from 'react-icons/fa';
+import studentService, { type Student as StudentAPI } from '../../../services/studentService';
 
 interface Student {
   id: number;
@@ -35,18 +36,37 @@ const Students: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [studentsData, setStudentsData] = useState<Student[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
+    studentId: '',
+    firstName: '',
+    lastName: '',
     email: '',
     program: '',
     phone: '',
     address: '',
+    dateOfBirth: '',
+    enrollmentDate: '',
     status: 'Active' as Student['status'],
+    currentSemester: '1',
+    gpa: '',
+    attendancePercentage: '',
+    feeStatus: 'Pending' as Student['financialInfo']['feeStatus'],
+    lastPaymentDate: '',
+    guardianName: '',
+    guardianPhone: '',
+    guardianEmail: '',
   });
 
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -59,104 +79,66 @@ const Students: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isFilterOpen]);
 
-  // Mock data
-  const studentsData: Student[] = [
-    {
-      id: 1,
-      studentId: "2025001",
-      name: "Alex Thompson",
-      email: "alex.t@university.edu",
-      program: "Computer Science",
-      phone: "(555) 123-4567",
-      address: "123 Campus Drive, University City",
-      status: "Active",
-      academicInfo: {
-        gpa: 3.8,
-        attendance: 95,
-        currentSemester: 2
-      },
-      financialInfo: {
-        feeStatus: "Paid",
-        lastPaymentDate: "2025-08-15"
-      }
-    },
-    {
-      id: 2,
-      studentId: "2025002",
-      name: "Maria Garcia",
-      email: "maria.g@university.edu",
-      program: "Data Science",
-      phone: "(555) 234-5678",
-      address: "456 University Ave, University City",
-      status: "Active",
-      academicInfo: {
-        gpa: 4.0,
-        attendance: 98,
-        currentSemester: 2
-      },
-      financialInfo: {
-        feeStatus: "Paid",
-        lastPaymentDate: "2025-08-10"
-      }
-    },
-    {
-      id: 3,
-      studentId: "2025003",
-      name: "James Wilson",
-      email: "james.w@university.edu",
-      program: "Artificial Intelligence",
-      phone: "(555) 345-6789",
-      address: "789 College Street, University City",
-      status: "Suspended",
-      academicInfo: {
-        gpa: 2.5,
-        attendance: 65,
-        currentSemester: 2
-      },
-      financialInfo: {
-        feeStatus: "Overdue",
-        lastPaymentDate: "2025-06-15"
-      }
-    },
-    {
-      id: 4,
-      studentId: "2025004",
-      name: "Emily Chen",
-      email: "emily.c@university.edu",
-      program: "Software Engineering",
-      phone: "(555) 456-7890",
-      address: "321 Tech Road, University City",
-      status: "Active",
-      academicInfo: {
-        gpa: 3.9,
-        attendance: 97,
-        currentSemester: 2
-      },
-      financialInfo: {
-        feeStatus: "Paid",
-        lastPaymentDate: "2025-08-20"
-      }
-    },
-    {
-      id: 5,
-      studentId: "2025005",
-      name: "Michael Brown",
-      email: "michael.b@university.edu",
-      program: "Cybersecurity",
-      phone: "(555) 567-8901",
-      address: "567 Security Blvd, University City",
-      status: "Inactive",
-      academicInfo: {
-        gpa: 3.2,
-        attendance: 78,
-        currentSemester: 2
-      },
-      financialInfo: {
-        feeStatus: "Pending",
-        lastPaymentDate: "2025-07-30"
-      }
+  const fetchData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await studentService.getAllStudents();
+      
+      const transformedStudents: Student[] = response.map((student: StudentAPI) => ({
+        id: student.id!,
+        studentId: student.studentId,
+        name: `${student.firstName} ${student.lastName}`,
+        email: student.email,
+        program: student.program,
+        phone: student.phone || 'N/A',
+        address: student.address || 'N/A',
+        status: mapStatus(student.status),
+        academicInfo: {
+          gpa: student.gpa || 0,
+          attendance: student.attendancePercentage || 0,
+          currentSemester: student.currentSemester || 1,
+        },
+        financialInfo: {
+          feeStatus: mapFeeStatus(student.feeStatus),
+          lastPaymentDate: student.lastPaymentDate || 'N/A',
+        },
+      }));
+
+      setStudentsData(transformedStudents);
+    } catch (err: any) {
+      console.error('Failed to fetch students:', err);
+      setError(err.message || 'Failed to load student data');
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  const mapStatus = (status: StudentAPI['status']): Student['status'] => {
+    switch (status) {
+      case 'ACTIVE':
+        return 'Active';
+      case 'INACTIVE':
+        return 'Inactive';
+      case 'SUSPENDED':
+        return 'Suspended';
+      default:
+        return 'Active';
+    }
+  };
+
+  const mapFeeStatus = (feeStatus: StudentAPI['feeStatus']): Student['financialInfo']['feeStatus'] => {
+    switch (feeStatus) {
+      case 'PAID':
+        return 'Paid';
+      case 'PENDING':
+        return 'Pending';
+      case 'OVERDUE':
+        return 'Overdue';
+      default:
+        return 'Pending';
+    }
+  };
 
   const filteredStudents = studentsData.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -173,54 +155,117 @@ const Students: React.FC = () => {
     setIsDialogOpen(true);
   }
 
-  function handleEditStudent(student: Student) {
-    setEditingStudent(student);
-    setFormData({
-      name: student.name,
-      email: student.email,
-      program: student.program,
-      phone: student.phone,
-      address: student.address,
-      status: student.status,
-    });
-    setIsEditDialogOpen(true);
-  }
-
-
   function handleClose() {
     setIsDialogOpen(false);
-    setIsEditDialogOpen(false);
-    setEditingStudent(null);
+    setSubmitError(null);
     setFormData({
-      name: '',
+      studentId: '',
+      firstName: '',
+      lastName: '',
       email: '',
       program: '',
       phone: '',
       address: '',
+      dateOfBirth: '',
+      enrollmentDate: '',
       status: 'Active',
+      currentSemester: '1',
+      gpa: '',
+      attendancePercentage: '',
+      feeStatus: 'Pending',
+      lastPaymentDate: '',
+      guardianName: '',
+      guardianPhone: '',
+      guardianEmail: '',
     });
   }
 
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (editingStudent) {
-      console.log('Updated Student:', { ...editingStudent, ...formData });
-      // Here you would typically make an API call to update the student
-    } else {
-      console.log('New Student:', formData);
-      // Here you would typically make an API call to create the student
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      // Map UI status to backend status
+      const backendStatus = formData.status === 'Active' ? 'ACTIVE' 
+        : formData.status === 'Inactive' ? 'INACTIVE' 
+        : formData.status === 'Suspended' ? 'SUSPENDED' 
+        : 'ACTIVE';
+
+      // Map UI fee status to backend fee status
+      const backendFeeStatus = formData.feeStatus === 'Paid' ? 'PAID'
+        : formData.feeStatus === 'Pending' ? 'PENDING'
+        : formData.feeStatus === 'Overdue' ? 'OVERDUE'
+        : 'PENDING';
+
+      const studentData: StudentAPI = {
+        studentId: formData.studentId,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone || undefined,
+        address: formData.address || undefined,
+        dateOfBirth: formData.dateOfBirth ? formData.dateOfBirth : undefined,
+        enrollmentDate: formData.enrollmentDate ? formData.enrollmentDate : undefined,
+        program: formData.program,
+        currentSemester: formData.currentSemester ? parseInt(formData.currentSemester) : undefined,
+        gpa: formData.gpa ? parseFloat(formData.gpa) : undefined,
+        attendancePercentage: formData.attendancePercentage ? parseInt(formData.attendancePercentage) : undefined,
+        status: backendStatus as StudentAPI['status'],
+        feeStatus: backendFeeStatus as StudentAPI['feeStatus'],
+        lastPaymentDate: formData.lastPaymentDate ? formData.lastPaymentDate : undefined,
+        guardianName: formData.guardianName || undefined,
+        guardianPhone: formData.guardianPhone || undefined,
+        guardianEmail: formData.guardianEmail || undefined,
+      };
+
+      await studentService.createStudent(studentData);
+      await fetchData(); // Refresh the list
+      handleClose();
+    } catch (err: any) {
+      console.error('Failed to create student:', err);
+      setSubmitError(err.message || 'Failed to create student');
+    } finally {
+      setIsSubmitting(false);
     }
-    handleClose();
   }
 
+
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto flex items-center justify-center h-64">
+        <div className="text-center">
+          <FaSpinner className="animate-spin h-12 w-12 text-primary-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading students data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <p className="font-bold">Error</p>
+          <p>{error}</p>
+          <button
+            onClick={fetchData}
+            className="mt-2 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
       <div className="space-y-6">
@@ -351,168 +396,281 @@ const Students: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t flex justify-end">
-                  <button
-                      onClick={() => handleEditStudent(student)}
-                      className="text-primary-600 hover:text-primary-800 flex items-center space-x-1"
-                  >
-                    <FiEdit2 className="w-4 h-4" />
-                    <span>Edit</span>
-                  </button>
-                </div>
+                {/* Edit functionality coming soon */}
               </div>
           ))}
         </div>
 
         {isDialogOpen && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-              <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 overflow-y-auto">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 m-4 max-h-[90vh] overflow-y-auto">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Add Student</h2>
+                {submitError && (
+                  <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                    {submitError}
+                  </div>
+                )}
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Full Name</label>
-                    <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        required
-                    />
+                  {/* Basic Information */}
+                  <div className="border-b pb-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">Basic Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Student ID *</label>
+                        <input
+                            type="text"
+                            name="studentId"
+                            value={formData.studentId}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                            placeholder="e.g., 2025001"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Email *</label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">First Name *</label>
+                        <input
+                            type="text"
+                            name="firstName"
+                            value={formData.firstName}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Last Name *</label>
+                        <input
+                            type="text"
+                            name="lastName"
+                            value={formData.lastName}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Phone</label>
+                        <input
+                            type="text"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="(555) 123-4567"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+                        <input
+                            type="date"
+                            name="dateOfBirth"
+                            value={formData.dateOfBirth}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700">Address</label>
+                        <input
+                            type="text"
+                            name="address"
+                            value={formData.address}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Email</label>
-                    <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        required
-                    />
+
+                  {/* Academic Information */}
+                  <div className="border-b pb-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">Academic Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Program *</label>
+                        <input
+                            type="text"
+                            name="program"
+                            value={formData.program}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                            placeholder="e.g., Computer Science"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Enrollment Date</label>
+                        <input
+                            type="date"
+                            name="enrollmentDate"
+                            value={formData.enrollmentDate}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Current Semester</label>
+                        <input
+                            type="number"
+                            name="currentSemester"
+                            value={formData.currentSemester}
+                            onChange={handleChange}
+                            min="1"
+                            max="12"
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">GPA</label>
+                        <input
+                            type="number"
+                            name="gpa"
+                            value={formData.gpa}
+                            onChange={handleChange}
+                            step="0.01"
+                            min="0"
+                            max="4"
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="e.g., 3.5"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Attendance %</label>
+                        <input
+                            type="number"
+                            name="attendancePercentage"
+                            value={formData.attendancePercentage}
+                            onChange={handleChange}
+                            min="0"
+                            max="100"
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="e.g., 95"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Status *</label>
+                        <select
+                            name="status"
+                            value={formData.status}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                        >
+                          <option value="Active">Active</option>
+                          <option value="Inactive">Inactive</option>
+                          <option value="Suspended">Suspended</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Program</label>
-                    <input
-                        type="text"
-                        name="program"
-                        value={formData.program}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        required
-                    />
+
+                  {/* Financial Information */}
+                  <div className="border-b pb-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">Financial Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Fee Status</label>
+                        <select
+                            name="feeStatus"
+                            value={formData.feeStatus}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                          <option value="Paid">Paid</option>
+                          <option value="Pending">Pending</option>
+                          <option value="Overdue">Overdue</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Last Payment Date</label>
+                        <input
+                            type="date"
+                            name="lastPaymentDate"
+                            value={formData.lastPaymentDate}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Guardian Information */}
+                  <div className="pb-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">Guardian Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Guardian Name</label>
+                        <input
+                            type="text"
+                            name="guardianName"
+                            value={formData.guardianName}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Guardian Phone</label>
+                        <input
+                            type="text"
+                            name="guardianPhone"
+                            value={formData.guardianPhone}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700">Guardian Email</label>
+                        <input
+                            type="email"
+                            name="guardianEmail"
+                            value={formData.guardianEmail}
+                            onChange={handleChange}
+                            className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex justify-end space-x-3 pt-4">
                     <button
                         type="button"
                         onClick={handleClose}
                         className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                        disabled={isSubmitting}
                     >
                       Cancel
                     </button>
                     <button
                         type="submit"
-                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center space-x-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        disabled={isSubmitting}
                     >
-                      Save
+                      {isSubmitting ? (
+                        <>
+                          <FaSpinner className="animate-spin h-4 w-4" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <span>Save Student</span>
+                      )}
                     </button>
                   </div>
                 </form>
               </div>
             </div>
         )}
-          {isEditDialogOpen && (
-              <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-                  <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
-                      <h2 className="text-xl font-semibold text-gray-900 mb-4">Edit Student</h2>
-                      <form onSubmit={handleSubmit} className="space-y-4">
-                          <div>
-                              <label className="block text-sm font-medium text-gray-700">Full Name</label>
-                              <input
-                                  type="text"
-                                  name="name"
-                                  value={formData.name}
-                                  onChange={handleChange}
-                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                  required
-                              />
-                          </div>
-                          <div>
-                              <label className="block text-sm font-medium text-gray-700">Email</label>
-                              <input
-                                  type="email"
-                                  name="email"
-                                  value={formData.email}
-                                  onChange={handleChange}
-                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                  required
-                              />
-                          </div>
-                          <div>
-                              <label className="block text-sm font-medium text-gray-700">Program</label>
-                              <input
-                                  type="text"
-                                  name="program"
-                                  value={formData.program}
-                                  onChange={handleChange}
-                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                  required
-                              />
-                          </div>
-                          <div>
-                              <label className="block text-sm font-medium text-gray-700">Phone</label>
-                              <input
-                                  type="text"
-                                  name="phone"
-                                  value={formData.phone}
-                                  onChange={handleChange}
-                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                  required
-                              />
-                          </div>
-                          <div>
-                              <label className="block text-sm font-medium text-gray-700">Address</label>
-                              <input
-                                  type="text"
-                                  name="address"
-                                  value={formData.address}
-                                  onChange={handleChange}
-                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                  required
-                              />
-                          </div>
-                          <div>
-                              <label className="block text-sm font-medium text-gray-700">Status</label>
-                              <select
-                                  name="status"
-                                  value={formData.status}
-                                  onChange={(e) => setFormData({...formData, status: e.target.value as Student['status']})}
-                                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                              >
-                                  <option value="Active">Active</option>
-                                  <option value="Inactive">Inactive</option>
-                                  <option value="Suspended">Suspended</option>
-                              </select>
-                          </div>
-                          <div className="flex justify-end space-x-3 pt-4">
-                              <button
-                                  type="button"
-                                  onClick={handleClose}
-                                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                              >
-                                  Cancel
-                              </button>
-                              <button
-                                  type="submit"
-                                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                              >
-                                  Save Changes
-                              </button>
-                          </div>
-                      </form>
-                  </div>
-              </div>
-          )}
       </div>
   );
 };

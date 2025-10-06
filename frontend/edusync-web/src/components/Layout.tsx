@@ -102,7 +102,7 @@ const Layout: React.FC<LayoutProps> = () => {
       <div className="lg:ml-64">
         {/* Top header */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
-          <div className="flex items-center justify-between px-6 py-3">
+          <div className="flex items-center justify-between px-6 h-16">
             {/* Mobile menu button */}
             <button
               onClick={toggleSidebar}

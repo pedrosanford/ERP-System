@@ -163,11 +163,13 @@ const StaffEvaluation: React.FC = () => {
     };
 
     return (
-        <div className="p-6 max-w-7xl mx-auto">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                    <FaUserTie /> Staff Performance & Evaluation Dashboard
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
+                    <FaUserTie className="w-6 h-6 text-primary-600" />
+                    <span>Staff Performance & Evaluation</span>
                 </h1>
+                <p className="text-gray-600">Evaluate and track staff performance</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

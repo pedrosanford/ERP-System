@@ -1,15 +1,18 @@
 // Staff.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     FaEnvelope,
     FaPhone,
     FaGraduationCap,
     FaBuilding,
     FaFilter,
-    FaSearch, FaPlus,
+    FaSearch, 
+    FaPlus,
+    FaSpinner,
 } from 'react-icons/fa';
 import {FiUsers} from "react-icons/fi";
 import AddStaffDialog from './AddStaffDialog';
+import hrService, { type Staff as StaffAPI, type Department } from '../../../services/hrService';
 
 interface StaffMember {
     id: number;
@@ -21,7 +24,7 @@ interface StaffMember {
     education: string;
     specialization: string;
     dateJoined: string;
-    status: 'Active' | 'On Leave' | 'Sabbatical';
+    status: 'Active' | 'On Leave' | 'Sabbatical' | 'Terminated' | 'Suspended';
     officeLocation: string;
     courses: string[];
     achievements: string[];
@@ -30,104 +33,68 @@ interface StaffMember {
 const Staff: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDepartment, setFilterDepartment] = useState('All');
-    // Add these new state variables
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [staffData, setStaffData] = useState<StaffMember[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
 
-    const staffData: StaffMember[] = [
-        {
-            id: 1,
-            name: "Dr. Sarah Smith",
-            role: "Professor",
-            department: "Computer Science",
-            email: "s.smith@school.edu",
-            phone: "(555) 123-4567",
-            education: "Ph.D. in Computer Science, MIT",
-            specialization: "Artificial Intelligence",
-            dateJoined: "2017-09-01",
-            status: "Active",
-            officeLocation: "Building A, Room 301",
-            courses: ["Introduction to AI", "Machine Learning", "Neural Networks"],
-            achievements: ["Best Teacher Award 2024", "Published 15 research papers", "AI Innovation Grant 2023"]
-        },
-        {
-            id: 2,
-            name: "Dr. James Wilson",
-            role: "Department Head",
-            department: "Mathematics",
-            email: "j.wilson@school.edu",
-            phone: "(555) 234-5678",
-            education: "Ph.D. in Mathematics, Stanford",
-            specialization: "Abstract Algebra",
-            dateJoined: "2013-08-15",
-            status: "Active",
-            officeLocation: "Building B, Room 201",
-            courses: ["Advanced Algebra", "Number Theory", "Mathematical Analysis"],
-            achievements: ["Department Excellence Award", "Mathematics Research Grant 2024"]
-        },
-        {
-            id: 3,
-            name: "Prof. Maria Garcia",
-            role: "Associate Professor",
-            department: "Physics",
-            email: "m.garcia@school.edu",
-            phone: "(555) 345-6789",
-            education: "Ph.D. in Physics, CalTech",
-            specialization: "Quantum Mechanics",
-            dateJoined: "2020-01-15",
-            status: "Active",
-            officeLocation: "Building C, Room 405",
-            courses: ["Quantum Physics", "Classical Mechanics", "Physics Lab"],
-            achievements: ["Outstanding Research Paper 2024", "Physics Innovation Award"]
-        },
-        {
-            id: 4,
-            name: "Mrs. Emily Brown",
-            role: "Principal",
-            department: "Administration",
-            email: "e.brown@school.edu",
-            phone: "(555) 456-7890",
-            education: "Ed.D. in Educational Leadership, Harvard",
-            specialization: "Educational Administration",
-            dateJoined: "2010-07-01",
-            status: "Active",
-            officeLocation: "Main Building, Room 101",
-            courses: [],
-            achievements: ["School Leadership Award", "Educational Excellence Recognition 2023"]
-        },
-        {
-            id: 5,
-            name: "Dr. Michael Chang",
-            role: "Assistant Professor",
-            department: "Chemistry",
-            email: "m.chang@school.edu",
-            phone: "(555) 567-8901",
-            education: "Ph.D. in Chemistry, Berkeley",
-            specialization: "Organic Chemistry",
-            dateJoined: "2022-09-01",
-            status: "Active",
-            officeLocation: "Building D, Room 205",
-            courses: ["Organic Chemistry", "Chemical Analysis", "Lab Methods"],
-            achievements: ["New Faculty Excellence Award", "Chemistry Innovation Grant"]
-        },
-        {
-            id: 6,
-            name: "Dr. Lisa Anderson",
-            role: "Associate Professor",
-            department: "Computer Science",
-            email: "l.anderson@school.edu",
-            phone: "(555) 678-9012",
-            education: "Ph.D. in Computer Engineering, Georgia Tech",
-            specialization: "Cybersecurity",
-            dateJoined: "2019-08-15",
-            status: "On Leave",
-            officeLocation: "Building A, Room 304",
-            courses: ["Network Security", "Cryptography", "Computer Networks"],
-            achievements: ["Cybersecurity Research Grant", "Best Paper Award 2024"]
+    // Fetch staff and departments on component mount
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const [staffResponse, departmentsResponse] = await Promise.all([
+                hrService.getAllStaff(),
+                hrService.getActiveDepartments(),
+            ]);
+
+            // Transform API data to UI format
+            const transformedStaff: StaffMember[] = staffResponse.map((staff: StaffAPI) => {
+                const dept = departmentsResponse.find(d => d.id === staff.departmentId);
+                return {
+                    id: staff.id!,
+                    name: staff.fullName || `${staff.firstName} ${staff.lastName}`,
+                    role: staff.position,
+                    department: dept?.name || 'N/A',
+                    email: staff.email,
+                    phone: staff.phone || 'N/A',
+                    education: 'N/A', // Can be extended later
+                    specialization: staff.position,
+                    dateJoined: staff.hireDate,
+                    status: mapStatus(staff.status || 'ACTIVE'),
+                    officeLocation: 'N/A', // Can be extended later
+                    courses: [], // Can be extended later
+                    achievements: [], // Can be extended later
+                };
+            });
+
+            setStaffData(transformedStaff);
+            setDepartments(departmentsResponse);
+        } catch (err: any) {
+            console.error('Failed to fetch data:', err);
+            setError(err.message || 'Failed to load staff data');
+        } finally {
+            setIsLoading(false);
         }
-    ];
+    };
 
-    const departments = ['All', ...new Set(staffData.map(staff => staff.department))];
+    const mapStatus = (status: string): 'Active' | 'On Leave' | 'Sabbatical' | 'Terminated' | 'Suspended' => {
+        switch (status) {
+            case 'ACTIVE': return 'Active';
+            case 'ON_LEAVE': return 'On Leave';
+            case 'TERMINATED': return 'Terminated';
+            case 'SUSPENDED': return 'Suspended';
+            default: return 'Active';
+        }
+    };
+
+    const departmentOptions = ['All', ...departments.map(dept => dept.name)];
 
     const filteredStaff = staffData.filter(staff => {
         const matchesSearch = staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -137,9 +104,41 @@ const Staff: React.FC = () => {
         return matchesSearch && matchesDepartment;
     });
 
+    const handleStaffAdded = () => {
+        fetchData(); // Refresh data after adding new staff
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                    <FaSpinner className="animate-spin h-12 w-12 text-primary-600 mx-auto mb-4" />
+                    <p className="text-gray-600">Loading staff data...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    <p className="font-bold">Error</p>
+                    <p>{error}</p>
+                    <button 
+                        onClick={fetchData}
+                        className="mt-2 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="p-6 max-w-7xl mx-auto">
-            <div className="mb-6 flex justify-between items-center">
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
                         <FiUsers className="w-6 h-6 text-primary-600" />
@@ -157,27 +156,25 @@ const Staff: React.FC = () => {
             </div>
 
             {/* Search and Filter Section */}
-            <div className="mb-6 flex flex-wrap gap-4">
-                <div className="flex-1 min-w-[300px]">
-                    <div className="relative">
-                        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"/>
-                        <input
-                            type="text"
-                            placeholder="Search staff..."
-                            className="w-full pl-10 pr-4 py-2 border rounded-lg"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
+            <div className="flex items-center space-x-3">
+                <div className="flex items-center border border-gray-300 rounded-lg px-3 py-2 flex-1">
+                    <FaSearch className="text-gray-400 w-4 h-4 mr-2"/>
+                    <input
+                        type="text"
+                        placeholder="Search by name, role, or specialization..."
+                        className="w-full focus:outline-none"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                 </div>
-                <div className="flex items-center gap-2">
-                    <FaFilter className="text-gray-400"/>
+                <div className="flex items-center border border-gray-300 rounded-lg px-3 py-2">
+                    <FaFilter className="text-gray-400 w-4 h-4 mr-2"/>
                     <select
-                        className="border rounded-lg px-4 py-2"
+                        className="focus:outline-none bg-transparent"
                         value={filterDepartment}
                         onChange={(e) => setFilterDepartment(e.target.value)}
                     >
-                        {departments.map(dept => (
+                        {departmentOptions.map(dept => (
                             <option key={dept} value={dept}>{dept}</option>
                         ))}
                     </select>
@@ -246,11 +243,28 @@ const Staff: React.FC = () => {
                     </div>
                 ))}
             </div>
+            
+            {staffData.length === 0 && (
+                <div className="text-center py-12">
+                    <FiUsers className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No staff members yet</h3>
+                    <p className="text-gray-600 mb-4">Get started by adding your first staff member</p>
+                    <button
+                        onClick={() => setIsDialogOpen(true)}
+                        className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 inline-flex items-center gap-2"
+                    >
+                        <FaPlus className="w-4 h-4" />
+                        Add Staff Member
+                    </button>
+                </div>
+            )}
+
             <AddStaffDialog
                 isOpen={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
+                onStaffAdded={handleStaffAdded}
+                departments={departments}
             />
-
         </div>
     );
 };

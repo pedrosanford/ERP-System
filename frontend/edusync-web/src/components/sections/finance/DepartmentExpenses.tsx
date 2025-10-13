@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiBriefcase, FiPlus, FiEdit2, FiTrash2, FiCheck, FiX, FiAlertCircle } from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa';
-import hrService, { type Department as DepartmentAPI, type Staff as StaffAPI } from '../../../services/hrService';
-import financeService from '../../../services/financeService';
+import hrService, { type Department as DepartmentAPI } from '../../../services/hrService';
 
 interface Expense {
   id: string;
@@ -47,101 +46,27 @@ const DepartmentExpenses: React.FC = () => {
   // Real departments from API
   const [departments, setDepartments] = useState<DepartmentAPI[]>([]);
   const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
-  const [departmentsError, setDepartmentsError] = useState<string | null>(null);
   
-  // Real staff members from API
-  const [staffMembers, setStaffMembers] = useState<StaffAPI[]>([]);
-  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
-  
-  // Loading states for data
-  const [isLoadingExpenses, setIsLoadingExpenses] = useState(false);
-  const [isLoadingReimbursements, setIsLoadingReimbursements] = useState(false);
   
   // Fetch real data on mount
   useEffect(() => {
     fetchDepartments();
-    fetchStaff();
-    fetchExpenses();
-    fetchReimbursements();
   }, []);
   
   const fetchDepartments = async () => {
     setIsLoadingDepartments(true);
-    setDepartmentsError(null);
     try {
       const depts = await hrService.getAllDepartments();
       setDepartments(depts);
     } catch (err: any) {
       console.error('Failed to fetch departments:', err);
-      setDepartmentsError(err.message || 'Failed to load departments');
     } finally {
       setIsLoadingDepartments(false);
     }
   };
   
-  const fetchStaff = async () => {
-    setIsLoadingStaff(true);
-    try {
-      const staff = await hrService.getAllStaff();
-      setStaffMembers(staff.filter(s => s.status === 'ACTIVE'));
-    } catch (err: any) {
-      console.error('Failed to fetch staff:', err);
-    } finally {
-      setIsLoadingStaff(false);
-    }
-  };
   
-  const fetchExpenses = async () => {
-    setIsLoadingExpenses(true);
-    try {
-      const transactions = await financeService.getTransactionsByCategory('Department Expense');
-      // Transform transactions to Expense format
-      const expensesData: Expense[] = transactions.map(t => ({
-        id: t.transactionId,
-        vendor: t.reference || 'N/A',
-        amount: t.amount,
-        category: t.subCategory || t.category,
-        department: 'IT Department', // For now, we'll use the only department we have
-        date: t.date,
-        description: t.description,
-        status: t.status === 'COMPLETED' ? 'Approved by Finance' : 'Pending',
-        approvedBy: t.createdBy
-      }));
-      setExpenses(expensesData);
-    } catch (err: any) {
-      console.error('Failed to fetch expenses:', err);
-    } finally {
-      setIsLoadingExpenses(false);
-    }
-  };
   
-  const fetchReimbursements = async () => {
-    setIsLoadingReimbursements(true);
-    try {
-      const transactions = await financeService.getTransactionsByCategory('Reimbursement');
-      const staff = await hrService.getAllStaff();
-      
-      // Transform transactions to Reimbursement format
-      const reimbursementsData: Reimbursement[] = transactions.map(t => {
-        const staffMember = staff.find(s => s.id === t.staffId);
-        return {
-          id: t.transactionId,
-          employeeName: staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Unknown Employee',
-          employeeId: staffMember?.employeeId || 'N/A',
-          amount: t.amount,
-          category: t.subCategory || t.category,
-          date: t.date,
-          description: t.description,
-          status: t.status === 'COMPLETED' ? 'Paid' : t.status === 'PENDING' ? 'Pending' : 'Approved'
-        };
-      });
-      setReimbursements(reimbursementsData);
-    } catch (err: any) {
-      console.error('Failed to fetch reimbursements:', err);
-    } finally {
-      setIsLoadingReimbursements(false);
-    }
-  };
 
   const [expenseForm, setExpenseForm] = useState({
     vendor: '',
@@ -163,7 +88,7 @@ const DepartmentExpenses: React.FC = () => {
 
   // Real data (no mock data)
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [budgets, setBudgets] = useState<DepartmentBudget[]>([]);
+  const [budgets] = useState<DepartmentBudget[]>([]);
   const [reimbursements, setReimbursements] = useState<Reimbursement[]>([]);
 
   const handleAddExpense = () => {

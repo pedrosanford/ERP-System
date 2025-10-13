@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import {
-  FiPlus, FiEdit, FiTrash2, FiSave, FiX, FiGripVertical,
+  FiPlus, FiEdit, FiTrash2, FiX,
   FiSettings, FiChevronDown, FiChevronUp, FiMove
 } from 'react-icons/fi';
-import { KanbanStage, CustomField } from './types';
+import type { KanbanStage, CustomField } from './types';
 
 interface PipelineCustomizationProps {
   stages: KanbanStage[];
@@ -257,7 +257,7 @@ const PipelineCustomization: React.FC<PipelineCustomizationProps> = ({
                 >
                   <div className="p-4 flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <FiGripVertical className="w-4 h-4 text-gray-400 cursor-grab" />
+                      <FiMove className="w-4 h-4 text-gray-400 cursor-grab" />
                       <div className={`w-3 h-3 ${stage.color} rounded-full`}></div>
                       {editingStage === stage.id ? (
                         <input

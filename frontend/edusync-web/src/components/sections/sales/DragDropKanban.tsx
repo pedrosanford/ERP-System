@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { FiPlus, FiGripVertical } from 'react-icons/fi';
+import { FiPlus, FiMove } from 'react-icons/fi';
 import ExpandableKanbanCard from './ExpandableKanbanCard';
-import { Lead, KanbanStage } from './types';
+import type { Lead, KanbanStage } from './types';
 
 interface DragDropKanbanProps {
   stages: KanbanStage[];
@@ -149,7 +149,7 @@ const DragDropKanban: React.FC<DragDropKanbanProps> = ({
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <FiGripVertical className="w-4 h-4 text-gray-400" />
+                  <FiMove className="w-4 h-4 text-gray-400" />
                   <h4 className="font-medium text-gray-900 text-sm">{stage.title}</h4>
                 </div>
                 <span className={`text-xs text-white px-2 py-1 rounded-full ${stage.color}`}>

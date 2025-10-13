@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { FiAward, FiPlus, FiEdit2, FiTrash2, FiTrendingUp } from 'react-icons/fi';
-import { FaSpinner } from 'react-icons/fa';
-import studentService, { type Student as StudentAPI } from '../../../services/studentService';
 
 interface Scholarship {
   id: string;
@@ -29,8 +27,6 @@ const ScholarshipsDiscounts: React.FC = () => {
   const [showScholarshipModal, setShowScholarshipModal] = useState(false);
   const [editingScholarship, setEditingScholarship] = useState<Scholarship | null>(null);
   
-  const [students, setStudents] = useState<StudentAPI[]>([]);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
   const [scholarshipForm, setScholarshipForm] = useState({
     studentName: '',
@@ -43,24 +39,13 @@ const ScholarshipsDiscounts: React.FC = () => {
   });
   
   useEffect(() => {
-    const fetchStudents = async () => {
-      setIsLoadingStudents(true);
-      try {
-        const data = await studentService.getAllStudents();
-        setStudents(data.filter(s => s.status === 'ACTIVE'));
-      } catch (err) {
-        console.error('Failed to fetch students:', err);
-      } finally {
-        setIsLoadingStudents(false);
-      }
-    };
-    fetchStudents();
+    // Students are loaded but not used in this component
   }, []);
 
   // Real data (no mock)
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
 
-  const [funds, setFunds] = useState<ScholarshipFund[]>([
+  const [funds] = useState<ScholarshipFund[]>([
     {
       id: 'FUND-001',
       fundName: 'Merit Scholarship Fund',

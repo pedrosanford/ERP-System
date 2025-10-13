@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
   FiPhone, FiMail, FiCalendar, FiClock, FiMessageSquare,
-  FiUser, FiBookOpen, FiDollarSign, FiFileText, FiStar,
+  FiUser, FiBookOpen, FiDollarSign, FiFileText,
   FiChevronDown, FiChevronUp, FiEdit, FiSave, FiX, FiPlus,
-  FiCheck, FiMoreHorizontal, FiGripVertical
+  FiMove
 } from 'react-icons/fi';
-import { Lead, Task, Communication, CustomField, KanbanStage } from './types';
+import type { Lead, Task, Communication, KanbanStage } from './types';
 import CustomFieldRenderer from './CustomFieldRenderer';
 
 interface ExpandableKanbanCardProps {
@@ -132,7 +132,7 @@ const ExpandableKanbanCard: React.FC<ExpandableKanbanCardProps> = ({
       >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center space-x-2">
-            <FiGripVertical
+            <FiMove
               className={`w-4 h-4 text-gray-400 ${!isExpanded ? 'cursor-grab' : 'cursor-pointer'}`}
             />
             <div className="flex-1 min-w-0">

@@ -14,7 +14,6 @@ const FinanceOverview: React.FC = () => {
     
     // Students list for dropdown
     const [students, setStudents] = useState<StudentAPI[]>([]);
-    const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
     // Form states for adding transaction
     const [showAddModal, setShowAddModal] = useState(false);
@@ -61,15 +60,12 @@ const FinanceOverview: React.FC = () => {
     };
     
     const fetchStudents = async () => {
-        setIsLoadingStudents(true);
         try {
             const studentsData = await studentService.getAllStudents();
             // Only show active students
             setStudents(studentsData.filter(s => s.status === 'ACTIVE'));
         } catch (err: any) {
             console.error('Failed to fetch students:', err);
-        } finally {
-            setIsLoadingStudents(false);
         }
     };
 

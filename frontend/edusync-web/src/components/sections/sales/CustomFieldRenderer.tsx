@@ -1,6 +1,6 @@
 import React from 'react';
 import { FiStar, FiUpload, FiLink, FiUser } from 'react-icons/fi';
-import { CustomField } from './types';
+import type { CustomField } from './types';
 
 interface CustomFieldRendererProps {
   field: CustomField;

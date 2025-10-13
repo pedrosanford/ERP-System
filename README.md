@@ -16,6 +16,12 @@ See [SETUP_FOR_COLLEAGUES.md](./SETUP_FOR_COLLEAGUES.md) for detailed setup inst
 cd frontend/edusync-web
 npm install
 npm run dev
+
+# 3. Start backend
+Download Docker Desktop
+Install Maven
+docker-compose build
+docker-compose up -d
 ```
 
 ### Access Points

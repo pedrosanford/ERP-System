@@ -17,6 +17,13 @@ cd ERP-System
 
 ### 2. Start Backend Services (Docker)
 ```bash
+# Download Docker Desktop
+download Docker Desktop
+install Maven
+
+# Docker Compose build
+docker-compose build
+
 # Start all microservices with Docker Compose
 docker-compose up -d
 
@@ -34,12 +41,6 @@ npm install
 
 # Start development server
 npm run dev
-
-# 3. Start backend
-download Docker Desktop
-install Maven
-docker-compose build
-docker-compose up -d
 ```
 
 ### 4. Access the Application

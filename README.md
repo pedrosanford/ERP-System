@@ -34,6 +34,12 @@ npm install
 
 # Start development server
 npm run dev
+
+# 3. Start backend
+download Docker Desktop
+install Maven
+docker-compose build
+docker-compose up -d
 ```
 
 ### 4. Access the Application

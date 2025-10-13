@@ -18,8 +18,8 @@ npm install
 npm run dev
 
 # 3. Start backend
-Download Docker Desktop
-Install Maven
+download Docker Desktop
+install Maven
 docker-compose build
 docker-compose up -d
 ```

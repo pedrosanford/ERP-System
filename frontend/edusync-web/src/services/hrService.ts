@@ -73,6 +73,11 @@ class HRService {
     return response.json();
   }
 
+  // Alias for getStats for consistency
+  async getHrStats(): Promise<HRStats> {
+    return this.getStats();
+  }
+
   // Departments
   async getAllDepartments(): Promise<Department[]> {
     const response = await fetch(`${API_URL}/api/hr/departments`, {

@@ -1,6 +1,54 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import studentService from '../services/studentService';
+import hrService from '../services/hrService';
+
+interface DashboardStats {
+  totalStudents: number;
+  activeStudents: number;
+  totalStaff: number;
+  activeStaff: number;
+  departments: number;
+  averageSalary: number;
+}
 
 const Dashboard: React.FC = () => {
+  const [stats, setStats] = useState<DashboardStats>({
+    totalStudents: 0,
+    activeStudents: 0,
+    totalStaff: 0,
+    activeStaff: 0,
+    departments: 0,
+    averageSalary: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const [studentStats, hrStats] = await Promise.all([
+        studentService.getStudentStats(),
+        hrService.getHrStats()
+      ]);
+
+      setStats({
+        totalStudents: studentStats.totalStudents || 0,
+        activeStudents: studentStats.activeStudents || 0,
+        totalStaff: hrStats.totalStaff || 0,
+        activeStaff: hrStats.activeStaff || 0,
+        departments: hrStats.departments || 0,
+        averageSalary: hrStats.averageSalary || 0
+      });
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Welcome section */}
@@ -20,8 +68,12 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600 mb-1">Total Students</p>
-              <p className="text-3xl font-bold text-gray-900 mb-1">2,847</p>
-              <p className="text-sm text-green-600 font-medium">+12% from last month</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">
+                {loading ? '...' : stats.totalStudents}
+              </p>
+              <p className="text-sm text-green-600 font-medium">
+                {stats.activeStudents} active
+              </p>
             </div>
             <div className="w-14 h-14 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl flex items-center justify-center">
               <span className="text-primary-600 text-xl">👥</span>
@@ -33,9 +85,11 @@ const Dashboard: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600 mb-1">Active Courses</p>
-              <p className="text-3xl font-bold text-gray-900 mb-1">156</p>
-              <p className="text-sm text-green-600 font-medium">+8% from last month</p>
+              <p className="text-sm font-medium text-gray-600 mb-1">Departments</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">
+                {loading ? '...' : stats.departments}
+              </p>
+              <p className="text-sm text-green-600 font-medium">Active departments</p>
             </div>
             <div className="w-14 h-14 bg-gradient-to-br from-secondary-100 to-secondary-200 rounded-xl flex items-center justify-center">
               <span className="text-secondary-600 text-xl">📚</span>
@@ -47,9 +101,11 @@ const Dashboard: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600 mb-1">Monthly Revenue</p>
-              <p className="text-3xl font-bold text-gray-900 mb-1">$45,230</p>
-              <p className="text-sm text-green-600 font-medium">+15% from last month</p>
+              <p className="text-sm font-medium text-gray-600 mb-1">Average Salary</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">
+                {loading ? '...' : `$${stats.averageSalary.toLocaleString()}`}
+              </p>
+              <p className="text-sm text-green-600 font-medium">Monthly average</p>
             </div>
             <div className="w-14 h-14 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
               <span className="text-green-600 text-xl">💰</span>
@@ -62,8 +118,12 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600 mb-1">Staff Members</p>
-              <p className="text-3xl font-bold text-gray-900 mb-1">89</p>
-              <p className="text-sm text-gray-500 font-medium">No change</p>
+              <p className="text-3xl font-bold text-gray-900 mb-1">
+                {loading ? '...' : stats.totalStaff}
+              </p>
+              <p className="text-sm text-green-600 font-medium">
+                {stats.activeStaff} active
+              </p>
             </div>
             <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
               <span className="text-blue-600 text-xl">👨‍🏫</span>

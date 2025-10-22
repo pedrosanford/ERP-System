@@ -1,0 +1,12 @@
+com/edusync/auth/entity/User.class
+com/edusync/auth/dto/AuthResponse.class
+com/edusync/auth/dto/RegisterRequest.class
+com/edusync/auth/dto/LoginRequest.class
+com/edusync/auth/util/JwtUtil.class
+com/edusync/auth/config/SecurityConfig.class
+com/edusync/auth/service/CustomUserDetailsService.class
+com/edusync/auth/repository/UserRepository.class
+com/edusync/auth/entity/User$Role.class
+com/edusync/auth/controller/AuthController.class
+com/edusync/auth/AuthApplication.class
+com/edusync/auth/service/AuthService.class

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiDollarSign, FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa';
 import studentService, { type Student as StudentAPI } from '../../../services/studentService';
+import financeService from '../../../services/financeService';
 
 interface TuitionRule {
   id: string;
@@ -41,6 +42,11 @@ const TuitionFees: React.FC = () => {
   const [students, setStudents] = useState<StudentAPI[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [studentsError, setStudentsError] = useState<string | null>(null);
+  
+  // Real invoices from database
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const [invoicesError, setInvoicesError] = useState<string | null>(null);
 
   // Form states
   const [ruleForm, setRuleForm] = useState({
@@ -59,10 +65,17 @@ const TuitionFees: React.FC = () => {
     dueDate: ''
   });
   
-  // Fetch real students on component mount
+  // Fetch students first, then invoices
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  // Fetch invoices after students are loaded
+  useEffect(() => {
+    if (students.length > 0) {
+      fetchInvoices();
+    }
+  }, [students]);
   
   const fetchStudents = async () => {
     setIsLoadingStudents(true);
@@ -79,13 +92,45 @@ const TuitionFees: React.FC = () => {
     }
   };
 
+  const fetchInvoices = async () => {
+    setIsLoadingInvoices(true);
+    setInvoicesError(null);
+    try {
+      // Fetch tuition and fees invoices from finance service
+      const [tuitionInvoices, feesInvoices] = await Promise.all([
+        financeService.getTransactionsByCategory('Tuition Invoice'),
+        financeService.getTransactionsByCategory('Fees Invoice')
+      ]);
+      
+      // Combine and transform to Invoice format
+      const allInvoices = [...tuitionInvoices, ...feesInvoices].map(transaction => {
+        const student = students.find(s => s.id === transaction.studentId);
+        return {
+          id: transaction.transactionId,
+          studentName: student ? `${student.firstName} ${student.lastName}` : 'Unknown Student',
+          grade: student?.program || 'Unknown Program',
+          amount: transaction.amount,
+          dueDate: transaction.date,
+          status: transaction.status === 'COMPLETED' ? 'Paid' as 'Paid' : 
+                  transaction.status === 'PENDING' ? 'Pending' as 'Pending' : 'Overdue' as 'Overdue'
+        };
+      });
+      
+      setInvoices(allInvoices);
+    } catch (err: any) {
+      console.error('Failed to fetch invoices:', err);
+      setInvoicesError(err.message || 'Failed to load invoices');
+    } finally {
+      setIsLoadingInvoices(false);
+    }
+  };
+
   // Real data (no mock data)
   const [tuitionRules, setTuitionRules] = useState<TuitionRule[]>([
     { id: '1', grade: 'Grade 1', course: 'General', amount: 5000, frequency: 'Monthly', status: 'Active' },
     { id: '2', grade: 'Grade 2', course: 'General', amount: 5500, frequency: 'Monthly', status: 'Active' },
   ]);
 
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const payments: Payment[] = []; // Empty payments for now
 
   // Handler functions
@@ -270,40 +315,61 @@ const TuitionFees: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {invoices.map((invoice) => (
-              <tr key={invoice.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{invoice.id}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invoice.studentName}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invoice.grade}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${invoice.amount.toLocaleString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invoice.dueDate}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                    invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {invoice.status}
-                  </span>
-                </td>
+      {invoicesError && (
+        <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          {invoicesError}
+        </div>
+      )}
+
+      {isLoadingInvoices ? (
+        <div className="flex items-center justify-center py-8">
+          <FaSpinner className="animate-spin h-8 w-8 text-primary-600" />
+          <span className="ml-2 text-gray-600">Loading invoices...</span>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {invoices.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    No invoices found. Generate some invoices to see them here.
+                  </td>
+                </tr>
+              ) : (
+                invoices.map((invoice) => (
+                  <tr key={invoice.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{invoice.id}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invoice.studentName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invoice.grade}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${invoice.amount.toLocaleString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invoice.dueDate}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                        invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {invoice.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 

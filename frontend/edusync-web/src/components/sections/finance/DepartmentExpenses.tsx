@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiBriefcase, FiPlus, FiEdit2, FiTrash2, FiCheck, FiX, FiAlertCircle } from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa';
 import hrService, { type Department as DepartmentAPI } from '../../../services/hrService';
+import financeService from '../../../services/financeService';
 
 interface Expense {
   id: string;
@@ -47,10 +48,16 @@ const DepartmentExpenses: React.FC = () => {
   const [departments, setDepartments] = useState<DepartmentAPI[]>([]);
   const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
   
+  // Real expenses from database
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isLoadingExpenses, setIsLoadingExpenses] = useState(false);
+  const [expensesError, setExpensesError] = useState<string | null>(null);
+  
   
   // Fetch real data on mount
   useEffect(() => {
     fetchDepartments();
+    fetchExpenses();
   }, []);
   
   const fetchDepartments = async () => {
@@ -62,6 +69,37 @@ const DepartmentExpenses: React.FC = () => {
       console.error('Failed to fetch departments:', err);
     } finally {
       setIsLoadingDepartments(false);
+    }
+  };
+
+  const fetchExpenses = async () => {
+    setIsLoadingExpenses(true);
+    setExpensesError(null);
+    try {
+      // Fetch department expense invoices from finance service
+      const expenseTransactions = await financeService.getTransactionsByCategory('Department Expense Invoice');
+      
+      // Transform to Expense format
+      const expensesData = expenseTransactions.map(transaction => ({
+        id: transaction.transactionId,
+        vendor: transaction.description.split(' - ')[0] || 'Unknown Vendor',
+        amount: transaction.amount,
+        category: transaction.subCategory || 'General',
+        department: 'IT Department', // Since we only have IT department
+        date: transaction.date,
+        description: transaction.description,
+        status: transaction.status === 'COMPLETED' ? 'Approved by Finance' as 'Approved by Finance' :
+                transaction.status === 'PENDING' ? 'Pending' as 'Pending' : 'Rejected' as 'Rejected',
+        approvedBy: transaction.createdBy,
+        receiptUrl: undefined
+      }));
+      
+      setExpenses(expensesData);
+    } catch (err: any) {
+      console.error('Failed to fetch expenses:', err);
+      setExpensesError(err.message || 'Failed to load expenses');
+    } finally {
+      setIsLoadingExpenses(false);
     }
   };
   
@@ -87,7 +125,6 @@ const DepartmentExpenses: React.FC = () => {
   });
 
   // Real data (no mock data)
-  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [budgets] = useState<DepartmentBudget[]>([]);
   const [reimbursements, setReimbursements] = useState<Reimbursement[]>([]);
 
@@ -243,65 +280,86 @@ const DepartmentExpenses: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {expenses.map((expense) => (
-              <tr key={expense.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.id}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{expense.vendor}</div>
-                    <div className="text-sm text-gray-500">{expense.description}</div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.category}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.department}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                  ${expense.amount.toLocaleString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.date}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    expense.status === 'Approved by Finance' ? 'bg-green-100 text-green-800' :
-                    expense.status === 'Approved by Dept Head' ? 'bg-blue-100 text-blue-800' :
-                    expense.status === 'Rejected' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {expense.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => handleEditExpense(expense)}
-                    className="text-primary-600 hover:text-primary-900 mr-3"
-                  >
-                    <FiEdit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteExpense(expense.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <FiTrash2 className="w-4 h-4" />
-                  </button>
-                </td>
+      {expensesError && (
+        <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          {expensesError}
+        </div>
+      )}
+
+      {isLoadingExpenses ? (
+        <div className="flex items-center justify-center py-8">
+          <FaSpinner className="animate-spin h-8 w-8 text-primary-600" />
+          <span className="ml-2 text-gray-600">Loading expenses...</span>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {expenses.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    No expenses found. Record some expenses to see them here.
+                  </td>
+                </tr>
+              ) : (
+                expenses.map((expense) => (
+                  <tr key={expense.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.id}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{expense.vendor}</div>
+                        <div className="text-sm text-gray-500">{expense.description}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.category}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.department}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                      ${expense.amount.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.date}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        expense.status === 'Approved by Finance' ? 'bg-green-100 text-green-800' :
+                        expense.status === 'Approved by Dept Head' ? 'bg-blue-100 text-blue-800' :
+                        expense.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {expense.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleEditExpense(expense)}
+                        className="text-primary-600 hover:text-primary-900 mr-3"
+                      >
+                        <FiEdit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteExpense(expense.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 

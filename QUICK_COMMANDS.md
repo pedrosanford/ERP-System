@@ -1,120 +1,120 @@
 # ERP System - Quick Commands
 
-## 🚀 Запуск системы
+## 🚀 System Startup
 
 ### Backend (Docker Compose)
-Backend запускается **отдельно** и работает в фоне:
+Backend runs **separately** and works in the background:
 
 ```bash
-# Запустить все микросервисы
+# Start all microservices
 docker-compose up -d
 
-# Проверить статус
+# Check status
 docker-compose ps
 
-# Остановить все
+# Stop all
 docker-compose down
 ```
 
 ### Frontend (React + Vite)
-Frontend запускается **отдельно** в режиме разработки:
+Frontend runs **separately** in development mode:
 
 ```bash
-# Перейти в папку frontend
+# Navigate to frontend folder
 cd frontend/edusync-web
 
-# Запустить dev server (http://localhost:5173)
+# Start dev server (http://localhost:5173)
 npm run dev
 
-# Остановить: Ctrl+C или Cmd+C
+# Stop: Ctrl+C or Cmd+C
 ```
 
-**⚠️ ВАЖНО:** Backend и Frontend - это **два разных процесса**!
-- Backend: `docker-compose up -d` (порты 8080-8086)
-- Frontend: `npm run dev` (порт 5173)
+**⚠️ IMPORTANT:** Backend and Frontend are **two different processes**!
+- Backend: `docker-compose up -d` (ports 8080-8086)
+- Frontend: `npm run dev` (port 5173)
 
 ---
 
 ## 🔒 Data Integrity & Referential Checks
 
-**ВАЖНО**: Finance модуль теперь включает проверки целостности данных:
-- При создании инвойса для студента, вы можете выбрать только **реальных активных студентов** из базы данных
-- При создании транзакции с привязкой к студенту, система проверяет что студент существует и активен
-- Это предотвращает создание транзакций для несуществующих студентов (например "John Doe" или "Jane Smith")
+**IMPORTANT**: Finance module now includes data integrity checks:
+- When creating an invoice for a student, you can only select **real active students** from the database
+- When creating a transaction linked to a student, the system verifies that the student exists and is active
+- This prevents creating transactions for non-existent students (such as "John Doe" or "Jane Smith")
 
-**Backend валидация**:
-- `FinanceService` использует Feign Client для проверки существования студента перед созданием транзакций
-- Только `ACTIVE` студенты могут быть привязаны к финансовым транзакциям
+**Backend validation**:
+- `FinanceService` uses Feign Client to verify student existence before creating transactions
+- Only `ACTIVE` students can be linked to financial transactions
 
 ---
 
-## 📊 Просмотр данных через API
+## 📊 Viewing Data via API
 
 ### Staff Members
 ```bash
-# Все сотрудники
+# All staff members
 curl -s http://localhost:8080/api/hr/staff | jq
 
-# Только активные
+# Only active staff
 curl -s http://localhost:8080/api/hr/staff/active | jq
 
-# По ID
+# By ID
 curl -s http://localhost:8080/api/hr/staff/1 | jq
 
-# HR статистика
+# HR statistics
 curl -s http://localhost:8080/api/hr/stats | jq
 ```
 
 ### Students
 ```bash
-# Все студенты
+# All students
 curl -s http://localhost:8080/api/student/students | jq
 
-# По ID
+# By ID
 curl -s http://localhost:8080/api/student/students/1 | jq
 
-# По статусу
+# By status
 curl -s http://localhost:8080/api/student/students/status/ACTIVE | jq
 
-# Статистика студентов
+# Student statistics
 curl -s http://localhost:8080/api/student/stats | jq
 ```
 
 ### Departments
 ```bash
-# Все отделы
+# All departments
 curl -s http://localhost:8080/api/hr/departments | jq
 
-# Активные отделы
+# Active departments
 curl -s http://localhost:8080/api/hr/departments/active | jq
 ```
 
 ### Finance Transactions 💰
 ```bash
-# Все транзакции
+# All transactions
 curl -s http://localhost:8080/api/finance/transactions | jq
 
-# Последние транзакции
+# Recent transactions
 curl -s http://localhost:8080/api/finance/transactions/recent | jq
 
-# По типу (INCOME или EXPENSE)
+# By type (INCOME or EXPENSE)
 curl -s http://localhost:8080/api/finance/transactions/type/INCOME | jq
 curl -s http://localhost:8080/api/finance/transactions/type/EXPENSE | jq
 
-# По статусу (PENDING, COMPLETED, CANCELLED)
+# By status (PENDING, COMPLETED, CANCELLED)
 curl -s http://localhost:8080/api/finance/transactions/status/COMPLETED | jq
 
-# По категории
+# By category
 curl -s "http://localhost:8080/api/finance/transactions/category/Tuition%20Fees" | jq
 
-# По ID
+# By ID
 curl -s http://localhost:8080/api/finance/transactions/1 | jq
 
-# Финансовая статистика
+# Financial statistics
 curl -s http://localhost:8080/api/finance/stats | jq
 ```
 
-**Пример вывода статистики:**
+**Example statistics output:**
 ```json
 {
   "totalRevenue": 10500.00,
@@ -134,9 +134,9 @@ curl -s http://localhost:8080/api/finance/stats | jq
 
 ---
 
-## 🔧 Управление сервисами
+## 🔧 Service Management
 
-### Перезапуск конкретного сервиса (после изменений кода)
+### Restart specific service (after code changes)
 ```bash
 # HR Service
 docker-compose stop edusync-hr && docker rm -f erp-system-edusync-hr-1
@@ -159,7 +159,7 @@ docker-compose build edusync-gateway
 docker-compose up edusync-gateway -d
 ```
 
-### Просмотр логов
+### View logs
 ```bash
 # HR Service
 docker-compose logs edusync-hr --tail=50 -f
@@ -173,15 +173,15 @@ docker-compose logs edusync-finance --tail=50 -f
 # Gateway
 docker-compose logs edusync-gateway --tail=50 -f
 
-# Все сервисы
+# All services
 docker-compose logs --tail=50 -f
 ```
 
 ---
 
-## 🧪 Тестирование API
+## 🧪 API Testing
 
-### Добавить Staff Member
+### Add Staff Member
 ```bash
 curl -X POST http://localhost:8080/api/hr/staff \
   -H "Content-Type: application/json" \
@@ -200,7 +200,7 @@ curl -X POST http://localhost:8080/api/hr/staff \
   }' | jq
 ```
 
-### Добавить Student
+### Add Student
 ```bash
 curl -X POST http://localhost:8080/api/student/students \
   -H "Content-Type: application/json" \
@@ -223,7 +223,7 @@ curl -X POST http://localhost:8080/api/student/students \
   }' | jq
 ```
 
-### Добавить Transaction (Finance)
+### Add Transaction (Finance)
 ```bash
 curl -X POST http://localhost:8080/api/finance/transactions \
   -H "Content-Type: application/json" \
@@ -243,7 +243,7 @@ curl -X POST http://localhost:8080/api/finance/transactions \
 
 ---
 
-## 🏥 Проверка здоровья системы
+## 🏥 System Health Check
 
 ```bash
 # Gateway
@@ -258,28 +258,28 @@ docker exec erp-system-postgres-1 pg_isready
 
 ---
 
-## 📁 База данных (PostgreSQL)
+## 📁 Database (PostgreSQL)
 
 ```bash
-# Подключиться к БД
-docker exec -it erp-system-postgres-1 psql -U eduuser -d edusync_erp
+# Connect to database
+docker exec -it erp-system-postgres-1 psql -U edusync -d edusync_erp
 
-# Просмотр таблиц
+# View tables
 \dt
 
-# Просмотр staff
+# View staff
 SELECT * FROM staff;
 
-# Просмотр students
+# View students
 SELECT * FROM students;
 
-# Выход
+# Exit
 \q
 ```
 
 ---
 
-## 🌐 Порты сервисов
+## 🌐 Service Ports
 
 - **Frontend**: http://localhost:5173
 - **Gateway**: http://localhost:8080
@@ -294,38 +294,38 @@ SELECT * FROM students;
 
 ---
 
-## ✅ Быстрая проверка
+## ✅ Quick Check
 
 ```bash
-# 1. Backend работает?
+# 1. Is backend running?
 docker-compose ps
 
-# 2. Gateway доступен?
+# 2. Is gateway accessible?
 curl http://localhost:8080/actuator/health
 
-# 3. Данные есть?
+# 3. Is there data?
 curl -s http://localhost:8080/api/hr/staff | jq length
 curl -s http://localhost:8080/api/student/students | jq length
 
-# 4. Frontend работает?
-# Откройте браузер: http://localhost:5173
+# 4. Is frontend working?
+# Open browser: http://localhost:5173
 ```
 
 ---
 
-## 🔄 Полный перезапуск системы
+## 🔄 Full System Restart
 
 ```bash
-# Остановить все
+# Stop all
 docker-compose down
 
-# Удалить volumes (ВНИМАНИЕ: удалит все данные!)
+# Remove volumes (WARNING: will delete all data!)
 docker-compose down -v
 
-# Запустить заново
+# Start fresh
 docker-compose up -d
 
-# Проверить статус
+# Check status
 docker-compose ps
 ```
 

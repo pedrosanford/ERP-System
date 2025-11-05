@@ -42,6 +42,18 @@ const Layout: React.FC<LayoutProps> = () => {
     setActiveSection(section);
   };
 
+  // Listen for navigation events from Dashboard
+  useEffect(() => {
+    const handleDashboardNavigation = (event: CustomEvent<string>) => {
+      setActiveSection(event.detail);
+    };
+
+    window.addEventListener('dashboard-navigate', handleDashboardNavigation as EventListener);
+    return () => {
+      window.removeEventListener('dashboard-navigate', handleDashboardNavigation as EventListener);
+    };
+  }, []);
+
   const renderContent = () => {
     switch(activeSection) {
       case 'dashboard':

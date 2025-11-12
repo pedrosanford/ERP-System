@@ -27,11 +27,15 @@ const Settings: React.FC = () => {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center mb-4">
-          <FiSettings className="w-6 h-6 text-primary-600 mr-3" />
-          <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-primary-100 rounded-lg">
+            <FiSettings className="w-6 h-6 text-primary-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">System Settings</h2>
+            <p className="text-sm text-gray-600">Configure system preferences, manage users, and control feature access</p>
+          </div>
         </div>
-        <p className="text-gray-600">Configure system preferences, manage users, and control feature access</p>
       </div>
 
       {/* Navigation Tabs */}

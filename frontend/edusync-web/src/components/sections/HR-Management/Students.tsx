@@ -270,12 +270,14 @@ const Students: React.FC = () => {
   return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary-100 rounded-lg">
               <FiUsers className="w-6 h-6 text-primary-600" />
-              <span>Students</span>
-            </h1>
-            <p className="text-gray-600">Manage student enrollment and information</p>
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Students</h2>
+              <p className="text-sm text-gray-600">Manage student enrollment and information</p>
+            </div>
           </div>
           <button
               onClick={handleAddStudent}

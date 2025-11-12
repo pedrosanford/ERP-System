@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import { useModules } from '../context/ModuleContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -41,13 +41,13 @@ const navigationItems: NavItem[] = [
     {
         id: 'dashboard',
         label: 'Dashboard',
-        icon: <FiHome className="w-5 h-5"/>,
+        icon: <FiHome className="w-4 h-4"/>,
         path: '/dashboard'
     },
     {
         id: 'finance',
         label: 'Finance',
-        icon: <FiDollarSign className="w-5 h-5"/>,
+        icon: <FiDollarSign className="w-4 h-4"/>,
         path: '/finance',
         children: [
             {
@@ -76,7 +76,7 @@ const navigationItems: NavItem[] = [
             },
             {
                 id: 'finance-expenses',
-                label: 'Department Expenses',
+                label: 'Dept Expenses',
                 icon: <FiCreditCard className="w-4 h-4"/>,
                 path: '/finance/expenses'
             }
@@ -85,7 +85,7 @@ const navigationItems: NavItem[] = [
     {
         id: 'sales',
         label: 'Sales',
-        icon: <AiFillMoneyCollect className="w-5 h-5"/>,
+        icon: <AiFillMoneyCollect className="w-4 h-4"/>,
         path: '/sales',
         children: [
             {
@@ -105,7 +105,7 @@ const navigationItems: NavItem[] = [
     {
         id: 'hr',
         label: 'HR Management',
-        icon: <FiUsers className="w-5 h-5"/>,
+        icon: <FiUsers className="w-4 h-4"/>,
         path: '/hr',
         children: [
             {
@@ -137,7 +137,7 @@ const navigationItems: NavItem[] = [
     {
         id: 'settings',
         label: 'Settings',
-        icon: <FiSettings className="w-5 h-5"/>,
+        icon: <FiSettings className="w-4 h-4"/>,
         path: '/settings'
     }
 ];
@@ -153,13 +153,7 @@ const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSec
         // Show other items only if they're enabled
         return enabledModules.includes(item.id);
     });
-    const [expandedItems, setExpandedItems] = useState<string[]>(() => {
-        // Автоматически раскрываем родительский элемент, если активная секция является дочерней
-        const parentItem = filteredNavigationItems.find(item =>
-            item.children?.some(child => child.id === activeSection)
-        );
-        return parentItem ? [parentItem.id] : [];
-    });
+    const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
     const toggleExpanded = (itemId: string) => {
         setExpandedItems(prev =>
@@ -179,17 +173,7 @@ const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSec
         return false;
     };
 
-    // Автоматически раскрываем родительские секции, если активна любая из их дочерних секций
-    useEffect(() => {
-        const parentItem = filteredNavigationItems.find(item =>
-            item.children?.some(child => child.id === activeSection)
-        );
-        if (parentItem) {
-            setExpandedItems(prev =>
-                prev.includes(parentItem.id) ? prev : [...prev, parentItem.id]
-            );
-        }
-    }, [activeSection, filteredNavigationItems]);
+    // Убрана автоматическая раскрытие - пользователь может сам управлять раскрытием/скрытием списков
     return (
         <>
             {/* Mobile overlay */}
@@ -237,13 +221,13 @@ const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSec
                                     }
                                 }}
                                 className={`
-                  w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200
-                  group relative text-left
+                  w-full flex items-center justify-between px-4 py-2 rounded-lg transition-all duration-200
+                  group relative text-left text-sm
                   ${isItemActive(item)
                                     ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-500'
                                     : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
                                 }
-                `}
+                                `}
                             >
                                 <div className="flex items-center space-x-3">
                   <span className={`transition-colors ${
@@ -275,26 +259,26 @@ const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSec
 
                             {/* Sub-navigation items */}
                             {item.children && isItemExpanded(item.id) && (
-                                <div className="ml-6 space-y-1">
+                                <div className="ml-4 space-y-1">
                                     {item.children.map((child) => (
                                         <button
                                             key={child.id}
                                             onClick={() => onSectionChange(child.id)}
                                             className={`
                         w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-200
-                        text-sm
+                        text-sm text-left
                         ${activeSection === child.id
                                                 ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-500'
                                                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                             }
                       `}
                                         >
-                      <span className={`transition-colors ${
+                      <span className={`flex-shrink-0 transition-colors ${
                           activeSection === child.id ? 'text-primary-600' : 'text-gray-400'
                       }`}>
                         {child.icon}
                       </span>
-                                            <span className="font-medium">{child.label}</span>
+                                            <span className="font-medium whitespace-nowrap truncate min-w-0 flex-1">{child.label}</span>
                                         </button>
                                     ))}
                                 </div>

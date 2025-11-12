@@ -164,12 +164,14 @@ const StaffEvaluation: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary-100 rounded-lg">
                     <FaUserTie className="w-6 h-6 text-primary-600" />
-                    <span>Staff Performance & Evaluation</span>
-                </h1>
-                <p className="text-gray-600">Evaluate and track staff performance</p>
+                </div>
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Staff Performance & Evaluation</h2>
+                    <p className="text-sm text-gray-600">Evaluate and track staff performance</p>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

@@ -115,10 +115,12 @@ public class StaffDocumentService {
             document.setStaff(staff);
             document.setDocumentType(documentType.toUpperCase());
             document.setFileName(originalFilename);
+            document.setTitle(originalFilename); // Set title from filename
             document.setFilePath(filePath.toString());
             document.setFileSize(file.getSize());
             document.setContentType(file.getContentType());
-            document.setDescription(description);
+            document.setDescription(description != null ? description : originalFilename);
+            document.setCreator(staff.getFullName() != null ? staff.getFullName() : "System");
             document.setCreatedAt(LocalDateTime.now());
             document.setUpdatedAt(LocalDateTime.now());
             

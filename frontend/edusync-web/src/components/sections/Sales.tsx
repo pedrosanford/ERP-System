@@ -532,9 +532,14 @@ const Sales: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Sales & Admissions</h1>
-          <p className="text-gray-600">Manage student recruitment and enrollment pipeline</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary-100 rounded-lg">
+            <FiTarget className="w-6 h-6 text-primary-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Sales & Admissions</h2>
+            <p className="text-sm text-gray-600">Manage student recruitment and enrollment pipeline</p>
+          </div>
         </div>
         <button
           onClick={() => setShowAddLeadModal(true)}

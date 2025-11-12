@@ -203,8 +203,15 @@ const ProfileSettings: React.FC = () => {
     <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
-        <p className="text-gray-600 mt-2">Manage your personal information and preferences</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary-100 rounded-lg">
+            <FiUser className="w-6 h-6 text-primary-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Profile Settings</h2>
+            <p className="text-sm text-gray-600 mt-2">Manage your personal information and preferences</p>
+          </div>
+        </div>
       </div>
 
       {/* Success Message */}

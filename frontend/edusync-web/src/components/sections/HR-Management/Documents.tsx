@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FiFile,
   FiUpload,
@@ -10,11 +11,12 @@ import {
   FiCalendar,
   FiX
 } from 'react-icons/fi';
+import hrService from '../../../services/hrService';
 
 interface Document {
   id: string;
   title: string;
-  type: 'CONTRACT' | 'POLICY' | 'AGREEMENT' | 'REPORT' | 'FORM';
+  type: 'CONTRACT' | 'RESUME' | 'ID_COPY' | 'CERTIFICATE' | 'PERFORMANCE_REVIEW' | 'MEDICAL_CERTIFICATE' | 'TRAINING_CERTIFICATE' | 'REFERENCE_LETTER' | 'BANK_DETAILS' | 'EMERGENCY_CONTACT' | 'OTHER';
   category: 'HR' | 'LEGAL' | 'FINANCIAL' | 'ADMINISTRATIVE' | 'EMPLOYEE';
   dateCreated: string;
   lastModified: string;
@@ -44,35 +46,89 @@ const Documents: React.FC = () => {
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(false);
+  const [staffId, setStaffId] = useState<number | null>(null);
   const [formData, setFormData] = useState<UploadFormData>({
     title: '',
-    type: 'POLICY',
+    type: 'OTHER',
     category: 'HR',
     description: '',
     tags: ''
   });
 
+  // Get API base URL
+  // Use Gateway (port 8080) or direct HR service (port 8082) for testing
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  // For direct HR service testing (bypass gateway): use 'http://localhost:8082' and change path to /hr/...
+
+  // Fetch staff ID on component mount
+  useEffect(() => {
+    const fetchStaffId = async () => {
+      try {
+        const staffList = await hrService.getAllStaff();
+        if (staffList.length > 0) {
+          // Use the first staff member's ID
+          setStaffId(staffList[0].id || 1);
+        }
+      } catch (error) {
+        console.error('Error fetching staff:', error);
+        // Fallback to default staff ID
+        setStaffId(1);
+      }
+    };
+    fetchStaffId();
+  }, []);
+
   // Fetch documents from backend
   useEffect(() => {
-    fetchDocuments();
-  }, [searchTerm, selectedCategory]);
+    if (staffId !== null) {
+      fetchDocuments();
+    }
+  }, [searchTerm, selectedCategory, staffId]);
 
   const fetchDocuments = async () => {
+    if (staffId === null) return;
+    
     try {
       setLoading(true);
+      // Build query params for search if needed (backend might support this in future)
       const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (selectedCategory !== 'All') params.append('category', selectedCategory);
-
-      const response = await fetch(`/api/documents?${params}`);
+      if (searchTerm) {
+        // Note: Backend might not support search yet, so we filter on frontend
+      }
+      const queryString = params.toString();
+      const url = `${API_BASE_URL}/api/hr/staff/${staffId}/documents${queryString ? `?${queryString}` : ''}`;
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        setDocuments(data.map((doc: any) => ({
-          ...doc,
+        // Filter by category and search term on frontend
+        let filteredData = data;
+        if (selectedCategory !== 'All') {
+          // Note: Backend might not have category field, so we filter on frontend
+          filteredData = filteredData.filter((doc: any) => 
+            doc.documentType?.toUpperCase() === selectedCategory.toUpperCase()
+          );
+        }
+        if (searchTerm) {
+          filteredData = filteredData.filter((doc: any) => 
+            doc.fileName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            doc.description?.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }
+        
+        setDocuments(filteredData.map((doc: any) => ({
           id: doc.id.toString(),
-          dateCreated: new Date(doc.dateCreated).toLocaleDateString(),
-          lastModified: new Date(doc.lastModified).toLocaleDateString(),
-          fileSize: doc.fileSize
+          title: doc.title || doc.fileName || 'Untitled',
+          type: (doc.documentType || doc.type || 'OTHER').toUpperCase(),
+          category: 'HR', // Default category
+          dateCreated: doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : (doc.dateCreated ? new Date(doc.dateCreated).toLocaleDateString() : new Date().toLocaleDateString()),
+          lastModified: doc.updatedAt ? new Date(doc.updatedAt).toLocaleDateString() : (doc.lastModified ? new Date(doc.lastModified).toLocaleDateString() : new Date().toLocaleDateString()),
+          status: doc.status || 'ACTIVE',
+          fileSize: doc.fileSize || 0,
+          fileType: doc.contentType || 'application/pdf',
+          creator: doc.creator || doc.staff?.fullName || 'Unknown',
+          description: doc.description || '',
+          tags: doc.tags || [],
+          fileName: doc.fileName || 'document.pdf'
         })));
       }
     } catch (error) {
@@ -91,8 +147,13 @@ const Documents: React.FC = () => {
   };
 
   const handleDownload = async (docId: string, fileName: string) => {
+    if (staffId === null) {
+      alert('Staff ID not available');
+      return;
+    }
+    
     try {
-      const response = await fetch(`/api/documents/${docId}/download`);
+      const response = await fetch(`${API_BASE_URL}/api/hr/staff/${staffId}/documents/${docId}/download`);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -119,7 +180,7 @@ const Documents: React.FC = () => {
     setSelectedFiles([]);
     setFormData({
       title: '',
-      type: 'POLICY',
+      type: 'OTHER',
       category: 'HR',
       description: '',
       tags: ''
@@ -144,32 +205,74 @@ const Documents: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const uploadFormData = new FormData(); // Renamed to avoid shadowing
+    if (staffId === null) {
+      alert('Staff ID not available. Please try again.');
+      return;
+    }
 
     if (!selectedFiles.length || !formData.title) {
       alert('Please select a file and fill in the title');
       return;
     }
 
-    selectedFiles.forEach((file) => {
-      uploadFormData.append('files', file);
-    });
-    uploadFormData.append('title', formData.title);
-    uploadFormData.append('type', formData.type);
-    uploadFormData.append('category', formData.category);
-    uploadFormData.append('description', formData.description);
-    uploadFormData.append('tags', formData.tags);
+    // Backend expects only one file at a time
+    const file = selectedFiles[0];
+    
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      alert(`File size exceeds maximum allowed size of 10MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'image/jpeg', 'image/png'];
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png'];
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    
+    if (!allowedExtensions.includes(fileExtension) && !allowedTypes.includes(file.type)) {
+      alert(`File type not allowed. Allowed types: ${allowedExtensions.join(', ')}`);
+      return;
+    }
+
+    const uploadFormData = new FormData();
+
+    // Backend expects: file, documentType, description
+    uploadFormData.append('file', file);
+    uploadFormData.append('documentType', formData.type);
+    uploadFormData.append('description', formData.description || formData.title);
 
     try {
       setLoading(true);
-      // Use the correct endpoint with staffId
-      const response = await fetch('https//localhost:8082/api/documents/upload/', {
+      
+      // Use Gateway - StripPrefix=1 removes /api, so /api/hr/staff/1/upload becomes /hr/staff/1/upload
+      const response = await fetch(`${API_BASE_URL}/api/hr/staff/${staffId}/documents/upload`, {
         method: 'POST',
         body: uploadFormData,
+        // Don't set Content-Type header - let browser set it with boundary for multipart/form-data
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+        let errorMessage = `Upload failed: ${response.status} ${response.statusText}`;
+        
+        try {
+          const errorText = await response.text();
+          console.error('Upload error response:', errorText);
+          
+          // Try to parse as JSON for structured error messages
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.message || errorJson.error || errorText;
+          } catch {
+            // If not JSON, use the text as is
+            errorMessage = errorText || errorMessage;
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+        }
+        
+        alert(errorMessage);
+        return;
       }
 
       const result = await response.json();
@@ -178,10 +281,31 @@ const Documents: React.FC = () => {
       // Refresh documents list and close dialog
       await fetchDocuments();
       handleClose();
+      
+      // Reset form
+      setSelectedFiles([]);
+      setFormData({
+        title: '',
+        type: 'OTHER',
+        category: 'HR',
+        description: '',
+        tags: ''
+      });
 
-    } catch (error) {
+      // Show success message
+      alert('Document uploaded successfully!');
+
+    } catch (error: any) {
       console.error('Upload failed:', error);
-      alert('Upload failed. Please try again.');
+      
+      let errorMessage = 'Upload failed. Please try again.';
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      }
+      
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -201,12 +325,14 @@ const Documents: React.FC = () => {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary-100 rounded-lg">
               <FiFile className="w-6 h-6 text-primary-600" />
-              <span>Documents</span>
-            </h1>
-            <p className="text-gray-600">Upload and manage documents</p>
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Documents</h2>
+              <p className="text-sm text-gray-600">Upload and manage documents</p>
+            </div>
           </div>
           <button
               onClick={handleAddDocument}
@@ -317,9 +443,20 @@ const Documents: React.FC = () => {
         </div>
 
         {/* Upload Document Dialog */}
-        {isDialogOpen && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-              <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+        {isDialogOpen && createPortal(
+            <div 
+              className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[9999]" 
+              style={{ top: 0, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  handleClose();
+                }
+              }}
+            >
+              <div 
+                className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Upload Documents</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
 
@@ -351,10 +488,16 @@ const Documents: React.FC = () => {
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                       >
                         <option value="CONTRACT">Contract</option>
-                        <option value="POLICY">Policy</option>
-                        <option value="AGREEMENT">Agreement</option>
-                        <option value="REPORT">Report</option>
-                        <option value="FORM">Form</option>
+                        <option value="RESUME">Resume</option>
+                        <option value="ID_COPY">ID Copy</option>
+                        <option value="CERTIFICATE">Certificate</option>
+                        <option value="PERFORMANCE_REVIEW">Performance Review</option>
+                        <option value="MEDICAL_CERTIFICATE">Medical Certificate</option>
+                        <option value="TRAINING_CERTIFICATE">Training Certificate</option>
+                        <option value="REFERENCE_LETTER">Reference Letter</option>
+                        <option value="BANK_DETAILS">Bank Details</option>
+                        <option value="EMERGENCY_CONTACT">Emergency Contact</option>
+                        <option value="OTHER">Other</option>
                       </select>
                     </div>
 
@@ -463,13 +606,25 @@ const Documents: React.FC = () => {
                   </div>
                 </form>
               </div>
-            </div>
+            </div>,
+            document.body
         )}
 
         {/* Preview Dialog */}
-        {previewDocument && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-              <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex flex-col">
+        {previewDocument && createPortal(
+            <div 
+              className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[9999]" 
+              style={{ top: 0, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  closePreview();
+                }
+              }}
+            >
+              <div 
+                className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="flex justify-between items-center p-4 border-b">
                   <div>
                     <h3 className="text-lg font-semibold">{previewDocument.title}</h3>
@@ -505,7 +660,8 @@ const Documents: React.FC = () => {
                   </button>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body
         )}
       </div>
   );

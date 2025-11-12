@@ -29,6 +29,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/hr")
+@CrossOrigin(origins = "*")
 public class HrController {
     
     private final DepartmentService departmentService;
@@ -191,7 +192,13 @@ public class HrController {
     
     @GetMapping("/staff/{staffId}/documents")
     public ResponseEntity<List<StaffDocument>> getStaffDocuments(@PathVariable Long staffId) {
-        return ResponseEntity.ok(staffDocumentService.getDocumentsByStaffId(staffId));
+        try {
+            List<StaffDocument> documents = staffDocumentService.getDocumentsByStaffId(staffId);
+            return ResponseEntity.ok(documents);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
     
     @GetMapping("/staff/{staffId}/documents/type/{documentType}")

@@ -124,7 +124,7 @@ const navigationItems: NavItem[] = [
                 id: 'documents',
                 label: 'Documents',
                 icon: <FiFile className="w-4 h-4"/>,
-                path: '/documents'
+                path: '/DocumentUpload'
             },
             {
                 id: 'staff evaluation',

@@ -11,7 +11,7 @@ import ProfileSettings from './sections/ProfileSettings';
 import Settings from './sections/settings/Settings';
 import { FiMenu, FiBell, FiSearch, FiUser, FiLogOut } from 'react-icons/fi';
 import Staff from "./sections/HR-Management/Staff.tsx";
-import Documents from "./sections/HR-Management/Documents.tsx";
+import DocumentUpload from "./sections/HR-Management/DocumentUpload.tsx";
 import StaffEvaluation from "./sections/HR-Management/StaffEvaluation.tsx";
 
 interface LayoutProps {}
@@ -63,7 +63,7 @@ const Layout: React.FC<LayoutProps> = () => {
       case 'staff':
         return <Staff />;
       case 'documents':
-        return <Documents />;
+        return <DocumentUpload />;
       case 'staff evaluation':
         return <StaffEvaluation />;
       case 'finance':

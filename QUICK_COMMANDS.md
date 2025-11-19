@@ -35,21 +35,6 @@ npm run dev
 
 ---
 
-## 🔒 Data Integrity & Referential Checks
-
-**IMPORTANT**: Finance module now includes data integrity checks:
-- When creating an invoice for a student, you can only select **real active students** from the database
-- When creating a transaction linked to a student, the system verifies that the student exists and is active
-- This prevents creating transactions for non-existent students (such as "John Doe" or "Jane Smith")
-
-**Backend validation**:
-- `FinanceService` uses Feign Client to verify student existence before creating transactions
-- Only `ACTIVE` students can be linked to financial transactions
-
----
-
-## 📊 Viewing Data via API
-
 ### Staff Members
 ```bash
 # All staff members
@@ -273,7 +258,16 @@ SELECT * FROM staff;
 # View students
 SELECT * FROM students;
 
-# Exit
+# Total users (number)
+docker exec erp-system-postgres-1 psql -U edusync -d edusync_erp -c "SELECT COUNT(*) as total_users FROM users;"
+
+# Users details
+docker exec erp-system-postgres-1 psql -U edusync -d edusync_erp -c "SELECT id, name, email, role, enabled, created_at FROM users ORDER BY created_at DESC;"
+
+# User roles
+docker exec erp-system-postgres-1 psql -U edusync -d edusync_erp -c "SELECT role, COUNT(*) as count, COUNT(CASE WHEN enabled = true THEN 1 END) as enabled_count FROM users GROUP BY role;"
+
+#Exit
 \q
 ```
 

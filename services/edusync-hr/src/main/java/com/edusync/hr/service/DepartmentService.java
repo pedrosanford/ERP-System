@@ -3,6 +3,7 @@ package com.edusync.hr.service;
 import com.edusync.hr.entity.Department;
 import com.edusync.hr.repository.DepartmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,19 +29,19 @@ public class DepartmentService {
         return departmentRepository.findByIsActiveTrue();
     }
     
-    public Optional<Department> getDepartmentById(Long id) {
+    public Optional<Department> getDepartmentById(@NonNull Long id) {
         return departmentRepository.findById(id);
     }
     
-    public Optional<Department> getDepartmentByCode(String code) {
+    public Optional<Department> getDepartmentByCode(@NonNull String code) {
         return departmentRepository.findByCode(code);
     }
     
-    public Optional<Department> getDepartmentByName(String name) {
+    public Optional<Department> getDepartmentByName(@NonNull String name) {
         return departmentRepository.findByName(name);
     }
     
-    public List<Department> getSubDepartments(Long parentDepartmentId) {
+    public List<Department> getSubDepartments(@NonNull Long parentDepartmentId) {
         return departmentRepository.findByParentDepartmentId(parentDepartmentId);
     }
     
@@ -55,7 +56,7 @@ public class DepartmentService {
         return departmentRepository.save(department);
     }
     
-    public Department updateDepartment(Long id, Department departmentDetails) {
+    public Department updateDepartment(@NonNull Long id, Department departmentDetails) {
         Department department = departmentRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Department not found with id: " + id));
         
@@ -83,7 +84,7 @@ public class DepartmentService {
         return departmentRepository.save(department);
     }
     
-    public void deleteDepartment(Long id) {
+    public void deleteDepartment(@NonNull Long id) {
         Department department = departmentRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Department not found with id: " + id));
         
@@ -92,7 +93,7 @@ public class DepartmentService {
         departmentRepository.save(department);
     }
     
-    public void hardDeleteDepartment(Long id) {
+    public void hardDeleteDepartment(@NonNull Long id) {
         departmentRepository.deleteById(id);
     }
 }

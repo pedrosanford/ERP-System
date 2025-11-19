@@ -20,6 +20,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,7 +30,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/hr")
-@CrossOrigin(origins = "*")
 public class HrController {
     
     private final DepartmentService departmentService;
@@ -75,21 +75,21 @@ public class HrController {
     }
     
     @GetMapping("/departments/{id}")
-    public ResponseEntity<Department> getDepartmentById(@PathVariable Long id) {
+    public ResponseEntity<Department> getDepartmentById(@PathVariable @NonNull Long id) {
         return departmentService.getDepartmentById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
     
     @GetMapping("/departments/code/{code}")
-    public ResponseEntity<Department> getDepartmentByCode(@PathVariable String code) {
+    public ResponseEntity<Department> getDepartmentByCode(@PathVariable @NonNull String code) {
         return departmentService.getDepartmentByCode(code)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
     
     @GetMapping("/departments/{id}/subdepartments")
-    public ResponseEntity<List<Department>> getSubDepartments(@PathVariable Long id) {
+    public ResponseEntity<List<Department>> getSubDepartments(@PathVariable @NonNull Long id) {
         return ResponseEntity.ok(departmentService.getSubDepartments(id));
     }
     
@@ -102,7 +102,7 @@ public class HrController {
     
     @PutMapping("/departments/{id}")
     public ResponseEntity<Department> updateDepartment(
-        @PathVariable Long id,
+        @PathVariable @NonNull Long id,
         @Valid @RequestBody DepartmentDTO departmentDTO
     ) {
         Department departmentDetails = DepartmentMapper.toEntity(departmentDTO);
@@ -111,13 +111,13 @@ public class HrController {
     }
     
     @DeleteMapping("/departments/{id}")
-    public ResponseEntity<Void> deleteDepartment(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteDepartment(@PathVariable @NonNull Long id) {
         departmentService.deleteDepartment(id);
         return ResponseEntity.noContent().build();
     }
     
     @GetMapping("/departments/{id}/stats")
-    public ResponseEntity<Map<String, Object>> getDepartmentStats(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> getDepartmentStats(@PathVariable @NonNull Long id) {
         return ResponseEntity.ok(hrStatsService.getDepartmentStats(id));
     }
     
@@ -134,28 +134,28 @@ public class HrController {
     }
     
     @GetMapping("/staff/{id}")
-    public ResponseEntity<Staff> getStaffById(@PathVariable Long id) {
+    public ResponseEntity<Staff> getStaffById(@PathVariable @NonNull Long id) {
         return staffService.getStaffById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
     
     @GetMapping("/staff/employee/{employeeId}")
-    public ResponseEntity<Staff> getStaffByEmployeeId(@PathVariable String employeeId) {
+    public ResponseEntity<Staff> getStaffByEmployeeId(@PathVariable @NonNull String employeeId) {
         return staffService.getStaffByEmployeeId(employeeId)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
     
     @GetMapping("/staff/email/{email}")
-    public ResponseEntity<Staff> getStaffByEmail(@PathVariable String email) {
+    public ResponseEntity<Staff> getStaffByEmail(@PathVariable @NonNull String email) {
         return staffService.getStaffByEmail(email)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
     
     @GetMapping("/staff/department/{departmentId}")
-    public ResponseEntity<List<Staff>> getStaffByDepartment(@PathVariable Long departmentId) {
+    public ResponseEntity<List<Staff>> getStaffByDepartment(@PathVariable @NonNull Long departmentId) {
         return ResponseEntity.ok(staffService.getStaffByDepartment(departmentId));
     }
     
@@ -168,7 +168,7 @@ public class HrController {
     
     @PutMapping("/staff/{id}")
     public ResponseEntity<Staff> updateStaff(
-        @PathVariable Long id,
+        @PathVariable @NonNull Long id,
         @Valid @RequestBody StaffDTO staffDTO
     ) {
         Staff staffDetails = StaffMapper.toEntity(staffDTO);
@@ -177,13 +177,13 @@ public class HrController {
     }
     
     @PutMapping("/staff/{id}/terminate")
-    public ResponseEntity<Staff> terminateStaff(@PathVariable Long id) {
+    public ResponseEntity<Staff> terminateStaff(@PathVariable @NonNull Long id) {
         Staff terminated = staffService.terminateStaff(id, java.time.LocalDate.now());
         return ResponseEntity.ok(terminated);
     }
     
     @DeleteMapping("/staff/{id}")
-    public ResponseEntity<Void> deleteStaff(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteStaff(@PathVariable @NonNull Long id) {
         staffService.deleteStaff(id);
         return ResponseEntity.noContent().build();
     }
@@ -191,7 +191,7 @@ public class HrController {
     // ============ STAFF DOCUMENTS ============
     
     @GetMapping("/staff/{staffId}/documents")
-    public ResponseEntity<List<StaffDocument>> getStaffDocuments(@PathVariable Long staffId) {
+    public ResponseEntity<List<StaffDocument>> getStaffDocuments(@PathVariable @NonNull Long staffId) {
         try {
             List<StaffDocument> documents = staffDocumentService.getDocumentsByStaffId(staffId);
             return ResponseEntity.ok(documents);
@@ -203,16 +203,16 @@ public class HrController {
     
     @GetMapping("/staff/{staffId}/documents/type/{documentType}")
     public ResponseEntity<List<StaffDocument>> getStaffDocumentsByType(
-        @PathVariable Long staffId,
-        @PathVariable String documentType
+        @PathVariable @NonNull Long staffId,
+        @PathVariable @NonNull String documentType
     ) {
         return ResponseEntity.ok(staffDocumentService.getDocumentsByStaffIdAndType(staffId, documentType));
     }
     
     @GetMapping("/staff/{staffId}/documents/{documentId}")
     public ResponseEntity<StaffDocument> getStaffDocument(
-        @PathVariable Long staffId,
-        @PathVariable Long documentId
+        @PathVariable @NonNull Long staffId,
+        @PathVariable @NonNull Long documentId
     ) {
         return staffDocumentService.getDocumentById(documentId)
             .map(doc -> {
@@ -226,7 +226,7 @@ public class HrController {
     
     @PostMapping("/staff/{staffId}/documents/upload")
     public ResponseEntity<StaffDocument> uploadStaffDocument(
-        @PathVariable Long staffId,
+        @PathVariable @NonNull Long staffId,
         @RequestParam("file") MultipartFile file,
         @RequestParam("documentType") String documentType,
         @RequestParam(value = "description", required = false) String description
@@ -237,7 +237,7 @@ public class HrController {
     
 //    @PostMapping("/staff/{staffId}/documents")
 //    public ResponseEntity<StaffDocument> createStaffDocument(
-//        @PathVariable Long staffId,
+//        @PathVariable @NonNull Long staffId,
 //        @Valid @RequestBody StaffDocumentDTO documentDTO
 //    ) {
 //        StaffDocument document = StaffDocumentMapper.toEntity(documentDTO);
@@ -247,8 +247,8 @@ public class HrController {
     
     @PutMapping("/staff/{staffId}/documents/{documentId}")
     public ResponseEntity<StaffDocument> updateStaffDocument(
-        @PathVariable Long staffId,
-        @PathVariable Long documentId,
+        @PathVariable @NonNull Long staffId,
+        @PathVariable @NonNull Long documentId,
         @Valid @RequestBody StaffDocumentDTO documentDTO
     ) {
         StaffDocument documentDetails = StaffDocumentMapper.toEntity(documentDTO);
@@ -258,8 +258,8 @@ public class HrController {
     
     @DeleteMapping("/staff/{staffId}/documents/{documentId}")
     public ResponseEntity<Void> deleteStaffDocument(
-        @PathVariable Long staffId,
-        @PathVariable Long documentId
+        @PathVariable @NonNull Long staffId,
+        @PathVariable @NonNull Long documentId
     ) {
         staffDocumentService.deleteDocument(staffId, documentId);
         return ResponseEntity.noContent().build();
@@ -267,15 +267,19 @@ public class HrController {
     
     @GetMapping("/staff/{staffId}/documents/{documentId}/download")
     public ResponseEntity<Resource> downloadStaffDocument(
-        @PathVariable Long staffId,
-        @PathVariable Long documentId
+        @PathVariable @NonNull Long staffId,
+        @PathVariable @NonNull Long documentId
     ) throws MalformedURLException {
         Resource resource = staffDocumentService.downloadDocument(staffId, documentId);
         StaffDocument document = staffDocumentService.getDocumentById(documentId)
             .orElseThrow(() -> new RuntimeException("Document not found"));
         
+        String contentType = document.getContentType();
+        if (contentType == null) {
+            contentType = "application/octet-stream";
+        }
         return ResponseEntity.ok()
-            .contentType(MediaType.parseMediaType(document.getContentType()))
+            .contentType(MediaType.parseMediaType(contentType))
             .header(HttpHeaders.CONTENT_DISPOSITION, 
                 "attachment; filename=\"" + document.getFileName() + "\"")
             .body(resource);

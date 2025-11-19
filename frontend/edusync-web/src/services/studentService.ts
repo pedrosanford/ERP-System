@@ -1,5 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'; // Gateway URL
-const STUDENT_SERVICE_URL = `${API_BASE_URL}/api/student`;
+// Use relative URLs - Vite proxy will handle routing to Gateway
+const STUDENT_SERVICE_URL = '/api/student';
 
 export interface Student {
     id?: number;

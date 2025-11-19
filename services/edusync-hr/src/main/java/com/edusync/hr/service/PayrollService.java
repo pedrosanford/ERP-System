@@ -4,6 +4,7 @@ import com.edusync.hr.entity.Payroll;
 import com.edusync.hr.entity.Payroll.PayrollStatus;
 import com.edusync.hr.repository.PayrollRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,11 +28,11 @@ public class PayrollService {
         return payrollRepository.findAll();
     }
     
-    public Optional<Payroll> getPayrollById(Long id) {
+    public Optional<Payroll> getPayrollById(@NonNull Long id) {
         return payrollRepository.findById(id);
     }
     
-    public List<Payroll> getPayrollsByStaff(Long staffId) {
+    public List<Payroll> getPayrollsByStaff(@NonNull Long staffId) {
         return payrollRepository.findByStaffId(staffId);
     }
     
@@ -82,7 +83,7 @@ public class PayrollService {
         return payrollRepository.save(payroll);
     }
     
-    public Payroll updatePayroll(Long id, Payroll payrollDetails) {
+    public Payroll updatePayroll(@NonNull Long id, Payroll payrollDetails) {
         Payroll payroll = payrollRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Payroll not found with id: " + id));
         
@@ -105,7 +106,7 @@ public class PayrollService {
         return payrollRepository.save(payroll);
     }
     
-    public Payroll processPayroll(Long id) {
+    public Payroll processPayroll(@NonNull Long id) {
         Payroll payroll = payrollRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Payroll not found with id: " + id));
         
@@ -113,7 +114,7 @@ public class PayrollService {
         return payrollRepository.save(payroll);
     }
     
-    public Payroll markPayrollAsPaid(Long id, LocalDate paymentDate) {
+    public Payroll markPayrollAsPaid(@NonNull Long id, LocalDate paymentDate) {
         Payroll payroll = payrollRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Payroll not found with id: " + id));
         
@@ -123,7 +124,7 @@ public class PayrollService {
         return payrollRepository.save(payroll);
     }
     
-    public void deletePayroll(Long id) {
+    public void deletePayroll(@NonNull Long id) {
         payrollRepository.deleteById(id);
     }
 }

@@ -4,6 +4,7 @@ import com.edusync.hr.entity.Staff;
 import com.edusync.hr.entity.Staff.StaffStatus;
 import com.edusync.hr.repository.StaffRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,23 +27,23 @@ public class StaffService {
         return staffRepository.findAll();
     }
     
-    public Optional<Staff> getStaffById(Long id) {
+    public Optional<Staff> getStaffById(@NonNull Long id) {
         return staffRepository.findById(id);
     }
     
-    public Optional<Staff> getStaffByEmployeeId(String employeeId) {
+    public Optional<Staff> getStaffByEmployeeId(@NonNull String employeeId) {
         return staffRepository.findByEmployeeId(employeeId);
     }
     
-    public Optional<Staff> getStaffByEmail(String email) {
+    public Optional<Staff> getStaffByEmail(@NonNull String email) {
         return staffRepository.findByEmail(email);
     }
     
-    public Optional<Staff> getStaffByUserId(Long userId) {
+    public Optional<Staff> getStaffByUserId(@NonNull Long userId) {
         return staffRepository.findByUserId(userId);
     }
     
-    public List<Staff> getStaffByDepartment(Long departmentId) {
+    public List<Staff> getStaffByDepartment(@NonNull Long departmentId) {
         return staffRepository.findByDepartmentId(departmentId);
     }
     
@@ -58,7 +59,7 @@ public class StaffService {
         return staffRepository.countActiveStaff();
     }
     
-    public Long countActiveStaffByDepartment(Long departmentId) {
+    public Long countActiveStaffByDepartment(@NonNull Long departmentId) {
         return staffRepository.countActiveStaffByDepartment(departmentId);
     }
     
@@ -77,7 +78,7 @@ public class StaffService {
         return staffRepository.save(staff);
     }
     
-    public Staff updateStaff(Long id, Staff staffDetails) {
+    public Staff updateStaff(@NonNull Long id, Staff staffDetails) {
         Staff staff = staffRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Staff not found with id: " + id));
         
@@ -111,7 +112,7 @@ public class StaffService {
         return staffRepository.save(staff);
     }
     
-    public Staff terminateStaff(Long id, LocalDate terminationDate) {
+    public Staff terminateStaff(@NonNull Long id, LocalDate terminationDate) {
         Staff staff = staffRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Staff not found with id: " + id));
         
@@ -121,7 +122,7 @@ public class StaffService {
         return staffRepository.save(staff);
     }
     
-    public void deleteStaff(Long id) {
+    public void deleteStaff(@NonNull Long id) {
         staffRepository.deleteById(id);
     }
 }

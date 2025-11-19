@@ -1,5 +1,5 @@
 // hrService.ts - HR API Service
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'; // Gateway URL
+// Use relative URLs - Vite proxy will handle routing to Gateway
 
 // Types matching backend
 export interface Department {
@@ -59,14 +59,14 @@ class HRService {
 
   // Health Check
   async healthCheck(): Promise<{ status: string; service: string }> {
-    const response = await fetch(`${API_URL}/api/hr/health`);
+    const response = await fetch(`/api/hr/health`);
     if (!response.ok) throw new Error('HR Service is down');
     return response.json();
   }
 
   // Stats
   async getStats(): Promise<HRStats> {
-    const response = await fetch(`${API_URL}/api/hr/stats`, {
+    const response = await fetch(`/api/hr/stats`, {
       headers: this.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch HR stats');
@@ -80,7 +80,7 @@ class HRService {
 
   // Departments
   async getAllDepartments(): Promise<Department[]> {
-    const response = await fetch(`${API_URL}/api/hr/departments`, {
+    const response = await fetch(`/api/hr/departments`, {
       headers: this.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch departments');
@@ -88,7 +88,7 @@ class HRService {
   }
 
   async getActiveDepartments(): Promise<Department[]> {
-    const response = await fetch(`${API_URL}/api/hr/departments/active`, {
+    const response = await fetch(`/api/hr/departments/active`, {
       headers: this.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch active departments');
@@ -96,7 +96,7 @@ class HRService {
   }
 
   async getDepartmentById(id: number): Promise<Department> {
-    const response = await fetch(`${API_URL}/api/hr/departments/${id}`, {
+    const response = await fetch(`/api/hr/departments/${id}`, {
       headers: this.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch department');
@@ -104,7 +104,7 @@ class HRService {
   }
 
   async createDepartment(department: Department): Promise<Department> {
-    const response = await fetch(`${API_URL}/api/hr/departments`, {
+    const response = await fetch(`/api/hr/departments`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(department),
@@ -117,7 +117,7 @@ class HRService {
   }
 
   async updateDepartment(id: number, department: Department): Promise<Department> {
-    const response = await fetch(`${API_URL}/api/hr/departments/${id}`, {
+    const response = await fetch(`/api/hr/departments/${id}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(department),
@@ -130,7 +130,7 @@ class HRService {
   }
 
   async deleteDepartment(id: number): Promise<void> {
-    const response = await fetch(`${API_URL}/api/hr/departments/${id}`, {
+    const response = await fetch(`/api/hr/departments/${id}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
@@ -139,7 +139,7 @@ class HRService {
 
   // Staff
   async getAllStaff(): Promise<Staff[]> {
-    const response = await fetch(`${API_URL}/api/hr/staff`, {
+    const response = await fetch(`/api/hr/staff`, {
       headers: this.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch staff');
@@ -147,7 +147,7 @@ class HRService {
   }
 
   async getActiveStaff(): Promise<Staff[]> {
-    const response = await fetch(`${API_URL}/api/hr/staff/active`, {
+    const response = await fetch(`/api/hr/staff/active`, {
       headers: this.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch active staff');
@@ -155,7 +155,7 @@ class HRService {
   }
 
   async getStaffById(id: number): Promise<Staff> {
-    const response = await fetch(`${API_URL}/api/hr/staff/${id}`, {
+    const response = await fetch(`/api/hr/staff/${id}`, {
       headers: this.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch staff member');
@@ -163,7 +163,7 @@ class HRService {
   }
 
   async getStaffByEmployeeId(employeeId: string): Promise<Staff> {
-    const response = await fetch(`${API_URL}/api/hr/staff/employee/${employeeId}`, {
+    const response = await fetch(`/api/hr/staff/employee/${employeeId}`, {
       headers: this.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch staff member');
@@ -171,7 +171,7 @@ class HRService {
   }
 
   async getStaffByEmail(email: string): Promise<Staff> {
-    const response = await fetch(`${API_URL}/api/hr/staff/email/${encodeURIComponent(email)}`, {
+    const response = await fetch(`/api/hr/staff/email/${encodeURIComponent(email)}`, {
       headers: this.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch staff member');
@@ -179,7 +179,7 @@ class HRService {
   }
 
   async getStaffByDepartment(departmentId: number): Promise<Staff[]> {
-    const response = await fetch(`${API_URL}/api/hr/staff/department/${departmentId}`, {
+    const response = await fetch(`/api/hr/staff/department/${departmentId}`, {
       headers: this.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch department staff');
@@ -187,7 +187,7 @@ class HRService {
   }
 
   async createStaff(staff: Staff): Promise<Staff> {
-    const response = await fetch(`${API_URL}/api/hr/staff`, {
+    const response = await fetch(`/api/hr/staff`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(staff),
@@ -200,7 +200,7 @@ class HRService {
   }
 
   async updateStaff(id: number, staff: Staff): Promise<Staff> {
-    const response = await fetch(`${API_URL}/api/hr/staff/${id}`, {
+    const response = await fetch(`/api/hr/staff/${id}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(staff),
@@ -213,7 +213,7 @@ class HRService {
   }
 
   async terminateStaff(id: number): Promise<Staff> {
-    const response = await fetch(`${API_URL}/api/hr/staff/${id}/terminate`, {
+    const response = await fetch(`/api/hr/staff/${id}/terminate`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
     });
@@ -222,7 +222,7 @@ class HRService {
   }
 
   async deleteStaff(id: number): Promise<void> {
-    const response = await fetch(`${API_URL}/api/hr/staff/${id}`, {
+    const response = await fetch(`/api/hr/staff/${id}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });

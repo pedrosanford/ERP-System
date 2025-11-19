@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -50,7 +51,7 @@ public class FinanceController {
     }
     
     @GetMapping("/transactions/{id}")
-    public ResponseEntity<Transaction> getTransactionById(@PathVariable Long id) {
+    public ResponseEntity<Transaction> getTransactionById(@PathVariable @NonNull Long id) {
         return transactionService.getTransactionById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -91,7 +92,7 @@ public class FinanceController {
     
     @PutMapping("/transactions/{id}")
     public ResponseEntity<Transaction> updateTransaction(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @Valid @RequestBody Transaction transaction) {
         try {
             Transaction updated = transactionService.updateTransaction(id, transaction);
@@ -103,7 +104,7 @@ public class FinanceController {
     
     @PutMapping("/transactions/{id}/status")
     public ResponseEntity<Transaction> updateTransactionStatus(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @RequestParam TransactionStatus status) {
         try {
             Transaction updated = transactionService.updateTransactionStatus(id, status);
@@ -114,7 +115,7 @@ public class FinanceController {
     }
     
     @DeleteMapping("/transactions/{id}")
-    public ResponseEntity<Void> deleteTransaction(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteTransaction(@PathVariable @NonNull Long id) {
         try {
             transactionService.deleteTransaction(id);
             return ResponseEntity.noContent().build();

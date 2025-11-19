@@ -55,10 +55,7 @@ const Documents: React.FC = () => {
     tags: ''
   });
 
-  // Get API base URL
-  // Use Gateway (port 8080) or direct HR service (port 8082) for testing
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-  // For direct HR service testing (bypass gateway): use 'http://localhost:8082' and change path to /hr/...
+  // Use relative URLs - Vite proxy will handle routing to Gateway
 
   // Fetch staff ID on component mount
   useEffect(() => {
@@ -96,7 +93,7 @@ const Documents: React.FC = () => {
         // Note: Backend might not support search yet, so we filter on frontend
       }
       const queryString = params.toString();
-      const url = `${API_BASE_URL}/api/hr/staff/${staffId}/documents${queryString ? `?${queryString}` : ''}`;
+      const url = `/api/hr/staff/${staffId}/documents${queryString ? `?${queryString}` : ''}`;
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
@@ -153,7 +150,7 @@ const Documents: React.FC = () => {
     }
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/hr/staff/${staffId}/documents/${docId}/download`);
+      const response = await fetch(`/api/hr/staff/${staffId}/documents/${docId}/download`);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -246,7 +243,7 @@ const Documents: React.FC = () => {
       setLoading(true);
       
       // Use Gateway - StripPrefix=1 removes /api, so /api/hr/staff/1/upload becomes /hr/staff/1/upload
-      const response = await fetch(`${API_BASE_URL}/api/hr/staff/${staffId}/documents/upload`, {
+      const response = await fetch(`/api/hr/staff/${staffId}/documents/upload`, {
         method: 'POST',
         body: uploadFormData,
         // Don't set Content-Type header - let browser set it with boundary for multipart/form-data

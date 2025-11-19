@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -51,7 +52,7 @@ public class StudentController {
 
     // Get student by ID
     @GetMapping("/students/{id}")
-    public ResponseEntity<Student> getStudentById(@PathVariable Long id) {
+    public ResponseEntity<Student> getStudentById(@PathVariable @NonNull Long id) {
         return studentService.getStudentById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -100,7 +101,7 @@ public class StudentController {
     // Update student
     @PutMapping("/students/{id}")
     public ResponseEntity<Student> updateStudent(
-        @PathVariable Long id,
+        @PathVariable @NonNull Long id,
         @Valid @RequestBody Student student
     ) {
         try {
@@ -113,7 +114,7 @@ public class StudentController {
 
     // Delete student
     @DeleteMapping("/students/{id}")
-    public ResponseEntity<Void> deleteStudent(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteStudent(@PathVariable @NonNull Long id) {
         try {
             studentService.deleteStudent(id);
             return ResponseEntity.noContent().build();

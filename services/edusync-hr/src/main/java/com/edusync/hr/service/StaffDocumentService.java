@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,6 +24,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -62,7 +64,7 @@ public class StaffDocumentService {
      * Get all documents for a specific staff member
      */
     @Transactional(readOnly = true)
-    public List<StaffDocument> getDocumentsByStaffId(Long staffId) {
+    public List<StaffDocument> getDocumentsByStaffId(@NonNull Long staffId) {
         validateStaffExists(staffId);
         return staffDocumentRepository.findByStaffIdOrderByCreatedAtDesc(staffId);
     }
@@ -71,7 +73,7 @@ public class StaffDocumentService {
      * Get documents by staff ID and document type
      */
     @Transactional(readOnly = true)
-    public List<StaffDocument> getDocumentsByStaffIdAndType(Long staffId, String documentType) {
+    public List<StaffDocument> getDocumentsByStaffIdAndType(@NonNull Long staffId, String documentType) {
         validateStaffExists(staffId);
         validateDocumentType(documentType);
         return staffDocumentRepository.findByStaffIdAndDocumentTypeOrderByCreatedAtDesc(staffId, documentType.toUpperCase());
@@ -81,14 +83,14 @@ public class StaffDocumentService {
      * Get a specific document by ID
      */
     @Transactional(readOnly = true)
-    public Optional<StaffDocument> getDocumentById(Long documentId) {
+    public Optional<StaffDocument> getDocumentById(@NonNull Long documentId) {
         return staffDocumentRepository.findById(documentId);
     }
     
     /**
      * Upload a document file for a staff member
      */
-    public StaffDocument uploadDocument(Long staffId, MultipartFile file, String documentType, String description) {
+    public StaffDocument uploadDocument(@NonNull Long staffId, MultipartFile file, String documentType, String description) {
         validateFile(file);
         Staff staff = validateStaffExists(staffId);
         validateDocumentType(documentType);
@@ -134,7 +136,7 @@ public class StaffDocumentService {
     /**
      * Update document metadata
      */
-    public StaffDocument updateDocument(Long staffId, Long documentId, StaffDocument documentDetails) {
+    public StaffDocument updateDocument(@NonNull Long staffId, @NonNull Long documentId, StaffDocument documentDetails) {
         validateStaffExists(staffId);
         
         StaffDocument document = staffDocumentRepository.findById(documentId)
@@ -165,11 +167,14 @@ public class StaffDocumentService {
     /**
      * Delete a document
      */
-    public void deleteDocument(Long staffId, Long documentId) {
+    public void deleteDocument(@NonNull Long staffId, @NonNull Long documentId) {
         validateStaffExists(staffId);
         
-        StaffDocument document = staffDocumentRepository.findById(documentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + documentId));
+        StaffDocument document = Objects.requireNonNull(
+            staffDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + documentId)),
+            "Document must not be null"
+        );
         
         // Verify document belongs to the specified staff
         validateDocumentOwnership(document, staffId);
@@ -185,7 +190,7 @@ public class StaffDocumentService {
      * Download a document file
      */
     @Transactional(readOnly = true)
-    public Resource downloadDocument(Long staffId, Long documentId) throws MalformedURLException {
+    public Resource downloadDocument(@NonNull Long staffId, @NonNull Long documentId) throws MalformedURLException {
         validateStaffExists(staffId);
         
         StaffDocument document = staffDocumentRepository.findById(documentId)
@@ -205,7 +210,8 @@ public class StaffDocumentService {
                 throw new ResourceNotFoundException("Physical file not found at path: " + document.getFilePath());
             }
             
-            Resource resource = new UrlResource(filePath.toUri());
+            java.net.URI uri = Objects.requireNonNull(filePath.toUri(), "URI must not be null");
+            Resource resource = new UrlResource(uri);
             
             if (resource.exists() && resource.isReadable()) {
                 return resource;

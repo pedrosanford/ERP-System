@@ -48,12 +48,6 @@ spring:
             - Path=/api/academics/**
           filters:
             - StripPrefix=1
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOrigins: "*"
-            allowedMethods: "*"
-            allowedHeaders: "*"
 
 eureka:
   client:

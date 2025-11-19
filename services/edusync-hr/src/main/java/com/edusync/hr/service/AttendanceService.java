@@ -4,6 +4,7 @@ import com.edusync.hr.entity.Attendance;
 import com.edusync.hr.entity.Attendance.AttendanceStatus;
 import com.edusync.hr.repository.AttendanceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,19 +27,19 @@ public class AttendanceService {
         return attendanceRepository.findAll();
     }
     
-    public Optional<Attendance> getAttendanceById(Long id) {
+    public Optional<Attendance> getAttendanceById(@NonNull Long id) {
         return attendanceRepository.findById(id);
     }
     
-    public List<Attendance> getAttendanceByStaff(Long staffId) {
+    public List<Attendance> getAttendanceByStaff(@NonNull Long staffId) {
         return attendanceRepository.findByStaffId(staffId);
     }
     
-    public Optional<Attendance> getAttendanceByStaffAndDate(Long staffId, LocalDate date) {
+    public Optional<Attendance> getAttendanceByStaffAndDate(@NonNull Long staffId, LocalDate date) {
         return attendanceRepository.findByStaffIdAndDate(staffId, date);
     }
     
-    public List<Attendance> getAttendanceByDateRange(Long staffId, LocalDate startDate, LocalDate endDate) {
+    public List<Attendance> getAttendanceByDateRange(@NonNull Long staffId, LocalDate startDate, LocalDate endDate) {
         return attendanceRepository.findByStaffIdAndDateBetween(staffId, startDate, endDate);
     }
     
@@ -67,7 +68,7 @@ public class AttendanceService {
         return attendanceRepository.save(attendance);
     }
     
-    public Attendance updateAttendance(Long id, Attendance attendanceDetails) {
+    public Attendance updateAttendance(@NonNull Long id, Attendance attendanceDetails) {
         Attendance attendance = attendanceRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Attendance not found with id: " + id));
         
@@ -80,7 +81,7 @@ public class AttendanceService {
         return attendanceRepository.save(attendance);
     }
     
-    public void deleteAttendance(Long id) {
+    public void deleteAttendance(@NonNull Long id) {
         attendanceRepository.deleteById(id);
     }
 }

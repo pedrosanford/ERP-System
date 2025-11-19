@@ -4,6 +4,7 @@ import com.edusync.hr.entity.LeaveRequest;
 import com.edusync.hr.entity.LeaveRequest.LeaveStatus;
 import com.edusync.hr.repository.LeaveRequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,11 +28,11 @@ public class LeaveRequestService {
         return leaveRequestRepository.findAll();
     }
     
-    public Optional<LeaveRequest> getLeaveRequestById(Long id) {
+    public Optional<LeaveRequest> getLeaveRequestById(@NonNull Long id) {
         return leaveRequestRepository.findById(id);
     }
     
-    public List<LeaveRequest> getLeaveRequestsByStaff(Long staffId) {
+    public List<LeaveRequest> getLeaveRequestsByStaff(@NonNull Long staffId) {
         return leaveRequestRepository.findByStaffId(staffId);
     }
     
@@ -68,7 +69,7 @@ public class LeaveRequestService {
         return leaveRequestRepository.save(leaveRequest);
     }
     
-    public LeaveRequest updateLeaveRequest(Long id, LeaveRequest leaveRequestDetails) {
+    public LeaveRequest updateLeaveRequest(@NonNull Long id, LeaveRequest leaveRequestDetails) {
         LeaveRequest leaveRequest = leaveRequestRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Leave request not found with id: " + id));
         
@@ -89,7 +90,7 @@ public class LeaveRequestService {
         return leaveRequestRepository.save(leaveRequest);
     }
     
-    public LeaveRequest approveLeaveRequest(Long id, Long approvedBy) {
+    public LeaveRequest approveLeaveRequest(@NonNull Long id, @NonNull Long approvedBy) {
         LeaveRequest leaveRequest = leaveRequestRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Leave request not found with id: " + id));
         
@@ -100,7 +101,7 @@ public class LeaveRequestService {
         return leaveRequestRepository.save(leaveRequest);
     }
     
-    public LeaveRequest rejectLeaveRequest(Long id, Long rejectedBy, String notes) {
+    public LeaveRequest rejectLeaveRequest(@NonNull Long id, @NonNull Long rejectedBy, String notes) {
         LeaveRequest leaveRequest = leaveRequestRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Leave request not found with id: " + id));
         
@@ -112,7 +113,7 @@ public class LeaveRequestService {
         return leaveRequestRepository.save(leaveRequest);
     }
     
-    public void deleteLeaveRequest(Long id) {
+    public void deleteLeaveRequest(@NonNull Long id) {
         leaveRequestRepository.deleteById(id);
     }
 }

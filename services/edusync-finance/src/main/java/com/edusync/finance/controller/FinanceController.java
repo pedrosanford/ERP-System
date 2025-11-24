@@ -3,8 +3,12 @@ package com.edusync.finance.controller;
 import com.edusync.finance.entity.Transaction;
 import com.edusync.finance.entity.Transaction.TransactionStatus;
 import com.edusync.finance.entity.Transaction.TransactionType;
+import com.edusync.finance.entity.Scholarship;
+import com.edusync.finance.entity.TuitionFee;
 import com.edusync.finance.service.TransactionService;
 import com.edusync.finance.service.FinanceStatsService;
+import com.edusync.finance.service.ScholarshipService;
+import com.edusync.finance.service.TuitionFeeService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -22,13 +26,19 @@ public class FinanceController {
     
     private final TransactionService transactionService;
     private final FinanceStatsService financeStatsService;
-    
+    private final ScholarshipService scholarshipService;
+    private final TuitionFeeService tuitionFeeService;
+
     @Autowired
     public FinanceController(
             TransactionService transactionService,
-            FinanceStatsService financeStatsService) {
+            FinanceStatsService financeStatsService,
+            ScholarshipService scholarshipService,
+            TuitionFeeService tuitionFeeService) {
         this.transactionService = transactionService;
         this.financeStatsService = financeStatsService;
+        this.scholarshipService = scholarshipService;
+        this.tuitionFeeService = tuitionFeeService;
     }
     
     // Health check
@@ -117,6 +127,104 @@ public class FinanceController {
     public ResponseEntity<Void> deleteTransaction(@PathVariable Long id) {
         try {
             transactionService.deleteTransaction(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // ============ SCHOLARSHIP ENDPOINTS ============
+
+    @GetMapping("/scholarships")
+    public ResponseEntity<List<Scholarship>> getAllScholarships() {
+        return ResponseEntity.ok(scholarshipService.getAllScholarships());
+    }
+
+    @GetMapping("/scholarships/{id}")
+    public ResponseEntity<Scholarship> getScholarshipById(@PathVariable Long id) {
+        return scholarshipService.getScholarshipById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/scholarships/student/{studentId}")
+    public ResponseEntity<List<Scholarship>> getScholarshipsByStudentId(@PathVariable String studentId) {
+        return ResponseEntity.ok(scholarshipService.getScholarshipsByStudentId(studentId));
+    }
+
+    @PostMapping("/scholarships")
+    public ResponseEntity<Scholarship> createScholarship(@Valid @RequestBody Scholarship scholarship) {
+        Scholarship created = scholarshipService.createScholarship(scholarship);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/scholarships/{id}")
+    public ResponseEntity<Scholarship> updateScholarship(
+            @PathVariable Long id,
+            @Valid @RequestBody Scholarship scholarship) {
+        try {
+            Scholarship updated = scholarshipService.updateScholarship(id, scholarship);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/scholarships/{id}")
+    public ResponseEntity<Void> deleteScholarship(@PathVariable Long id) {
+        try {
+            scholarshipService.deleteScholarship(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // ============ TUITION FEE ENDPOINTS ============
+
+    @GetMapping("/tuition-fees")
+    public ResponseEntity<List<TuitionFee>> getAllTuitionFees() {
+        return ResponseEntity.ok(tuitionFeeService.getAllTuitionFees());
+    }
+
+    @GetMapping("/tuition-fees/{id}")
+    public ResponseEntity<TuitionFee> getTuitionFeeById(@PathVariable Long id) {
+        return tuitionFeeService.getTuitionFeeById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/tuition-fees/student/{studentId}")
+    public ResponseEntity<List<TuitionFee>> getTuitionFeesByStudentId(@PathVariable String studentId) {
+        return ResponseEntity.ok(tuitionFeeService.getTuitionFeesByStudentId(studentId));
+    }
+
+    @PostMapping("/tuition-fees")
+    public ResponseEntity<TuitionFee> createTuitionFee(@Valid @RequestBody TuitionFee tuitionFee) {
+        try {
+            TuitionFee created = tuitionFeeService.createTuitionFee(tuitionFee);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/tuition-fees/{id}")
+    public ResponseEntity<TuitionFee> updateTuitionFee(
+            @PathVariable Long id,
+            @Valid @RequestBody TuitionFee tuitionFee) {
+        try {
+            TuitionFee updated = tuitionFeeService.updateTuitionFee(id, tuitionFee);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/tuition-fees/{id}")
+    public ResponseEntity<Void> deleteTuitionFee(@PathVariable Long id) {
+        try {
+            tuitionFeeService.deleteTuitionFee(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();

@@ -1,5 +1,9 @@
 package com.edusync.sales.controller;
 
+import com.edusync.sales.service.SalesStatsService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -7,21 +11,20 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/sales")
+@RequestMapping("/sales")
+@CrossOrigin(origins = "*")
 public class SalesController {
 
+    private final SalesStatsService salesStatsService;
+
+    @Autowired
+    public SalesController(SalesStatsService salesStatsService) {
+        this.salesStatsService = salesStatsService;
+    }
+
     @GetMapping("/stats")
-    public Map<String, Object> getSalesStats() {
-        return Map.of(
-            "totalSales", 125430.00,
-            "monthlySales", 125430.00,
-            "salesGrowth", 22.5,
-            "newLeads", 45,
-            "conversionRate", 18.5,
-            "averageDealSize", 2787.33,
-            "salesTarget", 150000.00,
-            "targetProgress", 83.6
-        );
+    public ResponseEntity<Map<String, Object>> getSalesStats() {
+        return ResponseEntity.ok(salesStatsService.getSalesStats());
     }
 
     @GetMapping("/health")

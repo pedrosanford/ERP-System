@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FiTarget, FiUsers, FiTrendingUp, FiDollarSign, FiPhone, FiMail,
   FiCalendar, FiClock, FiMessageSquare, FiExternalLink, FiFilter,
   FiSearch, FiMapPin, FiBook, FiX, FiEdit, FiSave, FiPlus, FiCheck,
   FiUser, FiFileText, FiTrash2, FiSettings, FiMove
 } from 'react-icons/fi';
+import salesService from '../../services/salesService';
+import type { Lead, Task, Communication, SalesStage, SalesStats } from '../../services/salesService';
 
 const Sales: React.FC = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -24,18 +26,145 @@ const Sales: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
   const [migrationTarget, setMigrationTarget] = useState<string>('');
-  const [kanbanStages, setKanbanStages] = useState([
-    { id: 'inquiry', title: 'New Inquiry', color: 'bg-blue-500', lineColor: 'bg-blue-500', count: 1 },
-    { id: 'contacted', title: 'Contacted', color: 'bg-yellow-500', lineColor: 'bg-yellow-500', count: 1 },
-    { id: 'application-started', title: 'Application Started', color: 'bg-orange-500', lineColor: 'bg-orange-500', count: 1 },
-    { id: 'application-submitted', title: 'Application Submitted', color: 'bg-purple-500', lineColor: 'bg-purple-500', count: 1 },
-    { id: 'interview-scheduled', title: 'Interview/Tour Scheduled', color: 'bg-indigo-500', lineColor: 'bg-indigo-500', count: 1 },
-    { id: 'accepted', title: 'Accepted/Offered', color: 'bg-green-500', lineColor: 'bg-green-500', count: 0 },
-    { id: 'enrolled', title: 'Enrolled', color: 'bg-emerald-500', lineColor: 'bg-emerald-500', count: 0 },
-    { id: 'lost', title: 'Lost/Not Interested', color: 'bg-gray-500', lineColor: 'bg-gray-500', count: 0 }
-  ]);
 
-  const [leadsData, setLeadsData] = useState([
+  // API-driven state
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<SalesStats | null>(null);
+  const [kanbanStages, setKanbanStages] = useState<any[]>([]);
+  const [leadsData, setLeadsData] = useState<any[]>([]);
+  const [allCommunications, setAllCommunications] = useState<Communication[]>([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [selectedLeadTasks, setSelectedLeadTasks] = useState<Task[]>([]);
+  const [selectedLeadComms, setSelectedLeadComms] = useState<Communication[]>([]);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showCommModal, setShowCommModal] = useState(false);
+  const [taskForm, setTaskForm] = useState({ title: '', dueDate: '' });
+  const [commForm, setCommForm] = useState({ type: 'CALL' as 'CALL' | 'EMAIL' | 'MEETING' | 'TEXT' | 'OTHER', summary: '' });
+  const [editForm, setEditForm] = useState<any>(null);
+
+  // New lead form state
+  const [newLead, setNewLead] = useState({
+    name: '',
+    parentName: '',
+    grade: '',
+    program: '',
+    enrollmentTerm: '',
+    source: '',
+    email: '',
+    phone: '',
+    priority: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH',
+    estimatedTuitionValue: 0,
+    scholarshipRequested: false,
+    applicationFeeStatus: false,
+    offerLetterSent: false,
+    tuitionPaid: 0
+  });
+
+  // Load all data from API on mount
+  useEffect(() => {
+    loadAllData();
+  }, []);
+
+  const loadAllData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Load stages, leads, stats, communications, and tasks in parallel
+      const [stagesData, leadsDataFromAPI, statsData, communicationsData, tasksData] = await Promise.all([
+        salesService.getActiveStages(),
+        salesService.getAllLeads(),
+        salesService.getStats(),
+        salesService.getAllCommunications(),
+        salesService.getAllTasks()
+      ]);
+
+      // Transform stages to match kanban format
+      const transformedStages = stagesData.map((stage: SalesStage) => ({
+        id: stage.stageId,
+        title: stage.title,
+        color: stage.color,
+        lineColor: stage.color,
+        count: leadsDataFromAPI.filter((lead: Lead) => lead.status === stage.stageId).length
+      }));
+
+      setKanbanStages(transformedStages);
+      setLeadsData(leadsDataFromAPI);
+      setStats(statsData);
+      setAllCommunications(communicationsData);
+      setAllTasks(tasksData);
+    } catch (err: any) {
+      console.error('Failed to load sales data:', err);
+      setError(err.message || 'Failed to load sales data. Please check if the backend is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectLead = async (lead: any) => {
+    setSelectedLead(lead);
+    if (lead && lead.id) {
+      try {
+        const [tasks, comms] = await Promise.all([
+          salesService.getLeadTasks(lead.id),
+          salesService.getLeadCommunications(lead.id)
+        ]);
+        setSelectedLeadTasks(tasks);
+        setSelectedLeadComms(comms);
+      } catch (error) {
+        console.error('Failed to load lead details:', error);
+      }
+    }
+  };
+
+  const handleCreateLead = async () => {
+    // Validate required fields
+    if (!newLead.name || !newLead.parentName || !newLead.email || !newLead.phone) {
+      alert('Please fill in all required fields (Student Name, Parent Name, Email, Phone)');
+      return;
+    }
+
+    try {
+      // Create lead via API
+      const leadData: any = {
+        ...newLead,
+        status: 'inquiry', // Default status for new leads
+      };
+
+      await salesService.createLead(leadData);
+
+      // Close modal and reset form
+      setShowAddLeadModal(false);
+      setNewLead({
+        name: '',
+        parentName: '',
+        grade: '',
+        program: '',
+        enrollmentTerm: '',
+        source: '',
+        email: '',
+        phone: '',
+        priority: 'MEDIUM',
+        estimatedTuitionValue: 0,
+        scholarshipRequested: false,
+        applicationFeeStatus: false,
+        offerLetterSent: false,
+        tuitionPaid: 0
+      });
+
+      // Reload data to show new lead
+      await loadAllData();
+
+      alert('Lead created successfully!');
+    } catch (err: any) {
+      console.error('Failed to create lead:', err);
+      alert('Failed to create lead: ' + (err.message || 'Unknown error'));
+    }
+  };
+
+  // OLD MOCK DATA REMOVED - NOW LOADING FROM API
+  /*const [leadsData, setLeadsData] = useState([
     {
       id: 1,
       name: 'Sarah Johnson',
@@ -270,7 +399,7 @@ const Sales: React.FC = () => {
       studentId: '',
       dormAssigned: ''
     }
-  ]);
+  ]); */
 
   // Drag and Drop handlers
   const handleDragStart = (e: React.DragEvent, leadId: number) => {
@@ -299,13 +428,19 @@ const Sales: React.FC = () => {
     }
   };
 
-  const handleDrop = (e: React.DragEvent, stageId: string) => {
+  const handleDrop = async (e: React.DragEvent, stageId: string) => {
     e.preventDefault();
     if (draggedLead) {
-      const updatedLeads = leadsData.map(lead =>
-        lead.id === draggedLead ? { ...lead, status: stageId } : lead
-      );
-      setLeadsData(updatedLeads);
+      try {
+        // Update lead status
+        await salesService.updateLeadStatus(draggedLead, stageId);
+
+        // Reload all data to reflect changes
+        await loadAllData();
+      } catch (err: any) {
+        console.error('Failed to update lead status:', err);
+        alert('Failed to update lead: ' + (err.message || 'Unknown error'));
+      }
     }
     setDraggedLead(null);
     setDragOverStage(null);
@@ -435,98 +570,157 @@ const Sales: React.FC = () => {
     return matchesSearch && matchesGradeFilter;
   });
 
-  // Dashboard data with detailed information
+  // Calculate real data from leadsData for dashboard
+  const sourceBreakdown = leadsData.reduce((acc: any, lead) => {
+    const source = lead.source || 'Other';
+    acc[source] = (acc[source] || 0) + 1;
+    return acc;
+  }, {});
+
+  const sourcesArray = Object.entries(sourceBreakdown).map(([source, count]) => ({
+    source,
+    count: count as number,
+    percentage: stats?.totalLeads ? Math.round((count as number / stats.totalLeads) * 100) : 0
+  })).sort((a, b) => b.count - a.count);
+
+  // Top lead source
+  const topLeadSource = sourcesArray.length > 0 ? sourcesArray[0] : { source: 'None', count: 0, percentage: 0 };
+
+  // Follow-ups due today - get leads with next_follow_up_date = today
+  const today = new Date().toISOString().split('T')[0];
+  const followUpsToday = leadsData.filter((lead: any) => {
+    if (!lead.nextFollowUpDate) return false;
+    const followUpDate = new Date(lead.nextFollowUpDate).toISOString().split('T')[0];
+    return followUpDate === today;
+  });
+
+  const overdueFollowUps = leadsData.filter((lead: any) => {
+    if (!lead.nextFollowUpDate) return false;
+    const followUpDate = new Date(lead.nextFollowUpDate);
+    const todayDate = new Date(today);
+    return followUpDate < todayDate;
+  });
+
+  // Dashboard data with detailed information (using real stats from API)
   const dashboardItems = [
     {
       id: 'new-leads',
-      title: 'New Leads This Month',
-      value: '47',
+      title: 'New Leads',
+      value: stats ? stats.newLeads.toString() : '0',
       icon: FiUsers,
       color: 'text-blue-500',
-      subtitle: '+23% from last month',
+      subtitle: `Total: ${stats?.totalLeads || 0} leads`,
       expandedData: {
         monthlyData: [
-          { month: 'January', leads: 47, change: '+23%' },
-          { month: 'December', leads: 38, change: '+15%' },
-          { month: 'November', leads: 33, change: '+8%' },
-          { month: 'October', leads: 31, change: '+12%' }
+          { month: 'Current', leads: stats?.totalLeads || 0, change: 'All time' }
         ],
-        sources: [
-          { source: 'School Fairs', count: 15, percentage: 32 },
-          { source: 'Website', count: 12, percentage: 26 },
-          { source: 'Referrals', count: 10, percentage: 21 },
-          { source: 'Social Media', count: 7, percentage: 15 },
-          { source: 'Other', count: 3, percentage: 6 }
-        ]
+        sources: sourcesArray
       }
     },
     {
       id: 'applications',
-      title: 'Applications in Progress',
-      value: '18',
+      title: 'Overdue Tasks',
+      value: stats ? stats.overdueTasks.toString() : '0',
       icon: FiClock,
       color: 'text-orange-500',
-      subtitle: '6 started this week',
+      subtitle: 'Tasks needing attention',
       expandedData: {
-        statusBreakdown: [
-          { status: 'Started', count: 8, percentage: 44 },
-          { status: 'In Review', count: 6, percentage: 33 },
-          { status: 'Pending Documents', count: 4, percentage: 22 }
-        ],
+        statusBreakdown: kanbanStages.slice(0, 5).map(stage => ({
+          status: stage.title,
+          count: leadsData.filter((l: any) => l.status === stage.id).length,
+          percentage: stats?.totalLeads ? Math.round((leadsData.filter((l: any) => l.status === stage.id).length / stats.totalLeads) * 100) : 0
+        })),
         weeklyProgress: [
-          { week: 'This Week', started: 6, completed: 3 },
-          { week: 'Last Week', started: 4, completed: 5 },
-          { week: '2 Weeks Ago', started: 3, completed: 2 },
-          { week: '3 Weeks Ago', started: 5, completed: 4 }
+          { week: 'All Time', started: stats?.totalLeads || 0, completed: stats?.enrolledCount || 0 }
         ]
       }
     },
     {
       id: 'conversion',
       title: 'Enrollment Conversion',
-      value: '24.5%',
+      value: stats ? `${stats.conversionRate.toFixed(1)}%` : '0%',
       icon: FiTarget,
       color: 'text-green-500',
-      subtitle: '+3.2% improvement',
+      subtitle: `${stats?.enrolledCount || 0} enrolled`,
       expandedData: {
-        conversionFunnel: [
-          { stage: 'Inquiries', count: 200, percentage: 100 },
-          { stage: 'Applications Started', count: 95, percentage: 47.5 },
-          { stage: 'Applications Submitted', count: 72, percentage: 36 },
-          { stage: 'Interviews', count: 58, percentage: 29 },
-          { stage: 'Enrollments', count: 49, percentage: 24.5 }
-        ],
+        conversionFunnel: kanbanStages.map(stage => {
+          const count = leadsData.filter((l: any) => l.status === stage.id).length;
+          return {
+            stage: stage.title,
+            count,
+            percentage: stats?.totalLeads && stats.totalLeads > 0 ? Math.round((count / stats.totalLeads) * 100) : 0
+          };
+        }),
         monthlyTrends: [
-          { month: 'Jan', rate: 24.5 },
-          { month: 'Dec', rate: 21.3 },
-          { month: 'Nov', rate: 19.8 },
-          { month: 'Oct', rate: 22.1 }
+          { month: 'Current', rate: stats?.conversionRate || 0 }
         ]
       }
     },
     {
       id: 'pipeline-value',
       title: 'Pipeline Value',
-      value: '$287K',
+      value: stats ? `$${(stats.potentialRevenue / 1000).toFixed(0)}K` : '$0',
       icon: FiDollarSign,
       color: 'text-purple-500',
-      subtitle: 'Potential tuition revenue',
+      subtitle: `${stats?.scholarshipRequests || 0} scholarship requests`,
       expandedData: {
-        stageValues: [
-          { stage: 'New Inquiry', value: 75000, count: 25 },
-          { stage: 'Contacted', value: 68000, count: 18 },
-          { stage: 'Application Started', value: 52000, count: 15 },
-          { stage: 'Application Submitted', value: 48000, count: 12 },
-          { stage: 'Interview Scheduled', value: 44000, count: 10 }
-        ],
+        stageValues: kanbanStages.map(stage => {
+          const leadsInStage = leadsData.filter((l: any) => l.status === stage.id);
+          const totalValue = leadsInStage.reduce((sum: number, lead: any) => sum + (lead.estimatedTuitionValue || 0), 0);
+          return {
+            stage: stage.title,
+            value: totalValue,
+            count: leadsInStage.length
+          };
+        }).filter(s => s.count > 0),
         projectedRevenue: {
-          conservative: 215000,
-          realistic: 287000,
-          optimistic: 345000
+          conservative: Math.round(stats?.potentialRevenue * 0.75 || 0),
+          realistic: Math.round(stats?.potentialRevenue || 0),
+          optimistic: Math.round(stats?.potentialRevenue * 1.2 || 0)
         }
       }
     }
   ];
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-xl text-gray-700 font-semibold">Loading Sales Data...</p>
+          <p className="text-sm text-gray-500 mt-2">Please wait while we fetch your leads and pipeline</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center max-w-md">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Data</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="space-y-2">
+            <p className="text-sm text-gray-500">
+              Make sure the backend services are running:
+            </p>
+            <code className="block bg-gray-100 p-2 rounded text-xs">
+              Sales Service: http://localhost:8084
+            </code>
+          </div>
+          <button
+            onClick={loadAllData}
+            className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -577,19 +771,10 @@ const Sales: React.FC = () => {
           onClick={() => setSelectedDashboardItem({
             id: 'upcoming-events',
             title: 'Upcoming Events',
-            value: '8',
-            subtitle: '3 open houses this week',
+            value: '0',
+            subtitle: 'No events scheduled',
             expandedData: {
-              events: [
-                { id: 1, title: 'Open House - Elementary', date: '2025-01-20', time: '10:00 AM', location: 'Main Campus', attendees: 45, type: 'Open House' },
-                { id: 2, title: 'Open House - High School', date: '2025-01-22', time: '2:00 PM', location: 'Main Campus', attendees: 38, type: 'Open House' },
-                { id: 3, title: 'Virtual Information Session', date: '2025-01-24', time: '7:00 PM', location: 'Online', attendees: 52, type: 'Virtual' },
-                { id: 4, title: 'Campus Tour for Families', date: '2025-01-25', time: '11:00 AM', location: 'Main Campus', attendees: 12, type: 'Tour' },
-                { id: 5, title: 'STEM Program Showcase', date: '2025-01-27', time: '3:00 PM', location: 'Science Building', attendees: 28, type: 'Showcase' },
-                { id: 6, title: 'Arts Program Showcase', date: '2025-01-29', time: '6:00 PM', location: 'Arts Center', attendees: 35, type: 'Showcase' },
-                { id: 7, title: 'Parent Q&A Session', date: '2025-01-30', time: '7:30 PM', location: 'Auditorium', attendees: 42, type: 'Q&A' },
-                { id: 8, title: 'IB Program Information Night', date: '2025-02-01', time: '6:30 PM', location: 'Library', attendees: 18, type: 'Information' }
-              ]
+              events: []
             }
           })}
           className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50"
@@ -597,33 +782,22 @@ const Sales: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Upcoming Events</p>
-              <p className="text-2xl font-bold text-gray-900">8</p>
+              <p className="text-2xl font-bold text-gray-900">0</p>
             </div>
             <FiCalendar className="w-8 h-8 text-indigo-500" />
           </div>
-          <p className="text-sm text-gray-600 mt-2">3 open houses this week</p>
+          <p className="text-sm text-gray-600 mt-2">No events scheduled</p>
         </div>
 
         <div
           onClick={() => setSelectedDashboardItem({
             id: 'top-lead-source',
             title: 'Top Lead Source',
-            value: 'School Fairs',
-            subtitle: '32% of all leads',
+            value: topLeadSource.source,
+            subtitle: `${topLeadSource.percentage}% of all leads`,
             expandedData: {
-              sources: [
-                { source: 'School Fairs', count: 15, percentage: 32, trend: '+5%', description: 'Local education fairs and college prep events' },
-                { source: 'Website', count: 12, percentage: 26, trend: '+12%', description: 'Organic traffic and inquiry forms' },
-                { source: 'Referrals', count: 10, percentage: 21, trend: '+8%', description: 'Current families and word-of-mouth' },
-                { source: 'Social Media', count: 7, percentage: 15, trend: '+3%', description: 'Facebook, Instagram, and LinkedIn campaigns' },
-                { source: 'Direct Mail', count: 2, percentage: 4, trend: '-2%', description: 'Targeted mailers to local families' },
-                { source: 'Other', count: 1, percentage: 2, trend: '0%', description: 'Miscellaneous sources' }
-              ],
-              topPerformers: [
-                { name: 'North County Education Fair', leads: 8, date: '2025-01-15' },
-                { name: 'Private School Showcase', leads: 4, date: '2025-01-10' },
-                { name: 'STEM Education Expo', leads: 3, date: '2025-01-08' }
-              ]
+              sources: sourcesArray,
+              topPerformers: []
             }
           })}
           className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50"
@@ -631,83 +805,137 @@ const Sales: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Top Lead Source</p>
-              <p className="text-xl font-bold text-gray-900">School Fairs</p>
+              <p className="text-xl font-bold text-gray-900">{topLeadSource.source}</p>
             </div>
             <FiMapPin className="w-8 h-8 text-pink-500" />
           </div>
-          <p className="text-sm text-gray-600 mt-2">32% of all leads</p>
+          <p className="text-sm text-gray-600 mt-2">{topLeadSource.percentage}% of all leads</p>
         </div>
 
         <div
-          onClick={() => setSelectedDashboardItem({
-            id: 'follow-ups',
-            title: 'Follow-ups Due Today',
-            value: '12',
-            subtitle: '5 overdue from yesterday',
-            expandedData: {
-              todayFollowUps: [
-                { id: 1, leadName: 'Sarah Johnson', type: 'Call', time: '9:00 AM', priority: 'high', notes: 'Discuss robotics program details' },
-                { id: 2, leadName: 'Alex Chen', type: 'Email', time: '10:30 AM', priority: 'medium', notes: 'Send financial aid information' },
-                { id: 3, leadName: 'Emma Rodriguez', type: 'Meeting', time: '2:00 PM', priority: 'high', notes: 'Portfolio review follow-up' },
-                { id: 4, leadName: 'David Kim', type: 'Call', time: '3:30 PM', priority: 'medium', notes: 'Check on transcript status' }
-              ],
-              overdueFollowUps: [
-                { id: 5, leadName: 'Maria Garcia', type: 'Call', daysOverdue: 1, priority: 'high', notes: 'Admission decision discussion' },
-                { id: 6, leadName: 'John Smith', type: 'Email', daysOverdue: 1, priority: 'medium', notes: 'Tour scheduling' },
-                { id: 7, leadName: 'Lisa Wong', type: 'Call', daysOverdue: 2, priority: 'high', notes: 'Scholarship application review' }
-              ]
-            }
-          })}
+          onClick={() => {
+            const tasksToday = allTasks.filter(t => t.dueDate === today && !t.completed);
+            const overdueTasks = allTasks.filter(t => {
+              if (!t.dueDate || t.completed) return false;
+              return new Date(t.dueDate) < new Date(today);
+            });
+            const upcomingTasks = allTasks.filter(t => {
+              if (!t.dueDate || t.completed) return false;
+              const dueDate = new Date(t.dueDate);
+              const todayDate = new Date(today);
+              const fiveDaysFromNow = new Date(todayDate);
+              fiveDaysFromNow.setDate(todayDate.getDate() + 5);
+              return dueDate > todayDate && dueDate <= fiveDaysFromNow;
+            });
+
+            setSelectedDashboardItem({
+              id: 'follow-ups',
+              title: 'Follow-ups Due Today',
+              value: tasksToday.length.toString(),
+              subtitle: `${overdueTasks.length} overdue`,
+              expandedData: {
+                todayFollowUps: tasksToday.map(task => {
+                  const lead = leadsData.find(l => l.id === task.leadId);
+                  return {
+                    id: task.id,
+                    leadName: lead?.name || 'Unknown Lead',
+                    type: 'Task',
+                    time: task.dueDate,
+                    priority: 'medium',
+                    notes: task.title
+                  };
+                }),
+                overdueFollowUps: overdueTasks.map(task => {
+                  const lead = leadsData.find(l => l.id === task.leadId);
+                  const daysOverdue = Math.floor((new Date(today).getTime() - new Date(task.dueDate!).getTime()) / (1000 * 60 * 60 * 24));
+                  return {
+                    id: task.id,
+                    leadName: lead?.name || 'Unknown Lead',
+                    type: 'Task',
+                    daysOverdue,
+                    priority: 'high',
+                    notes: task.title
+                  };
+                }),
+                upcomingTasks: upcomingTasks.map(task => {
+                  const lead = leadsData.find(l => l.id === task.leadId);
+                  return {
+                    id: task.id,
+                    leadName: lead?.name || 'Unknown Lead',
+                    dueDate: task.dueDate,
+                    notes: task.title
+                  };
+                })
+              }
+            });
+          }}
           className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50"
         >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Follow-ups Due Today</p>
-              <p className="text-2xl font-bold text-gray-900">12</p>
+              <p className="text-2xl font-bold text-gray-900">{allTasks.filter(t => t.dueDate === today && !t.completed).length}</p>
             </div>
             <FiClock className="w-8 h-8 text-red-500" />
           </div>
-          <p className="text-sm text-red-600 mt-2">5 overdue from yesterday</p>
+          <p className="text-sm text-red-600 mt-2">{allTasks.filter(t => t.dueDate && !t.completed && new Date(t.dueDate) < new Date(today)).length} overdue</p>
         </div>
 
         <div
-          onClick={() => setSelectedDashboardItem({
-            id: 'communications',
-            title: 'Communications',
-            value: '156',
-            subtitle: '89 emails, 67 calls',
-            expandedData: {
-              summary: {
-                totalThisMonth: 156,
-                emails: 89,
-                calls: 67,
-                meetings: 12,
-                texts: 8
-              },
-              recentActivity: [
-                { id: 1, type: 'email', leadName: 'Sarah Johnson', subject: 'STEM Program Information', timestamp: '2025-01-20T14:30:00Z', status: 'sent' },
-                { id: 2, type: 'call', leadName: 'Alex Chen', duration: '15 mins', timestamp: '2025-01-20T13:15:00Z', status: 'completed' },
-                { id: 3, type: 'email', leadName: 'Emma Rodriguez', subject: 'Portfolio Review Results', timestamp: '2025-01-20T11:45:00Z', status: 'opened' },
-                { id: 4, type: 'call', leadName: 'David Kim', duration: '8 mins', timestamp: '2025-01-20T10:20:00Z', status: 'voicemail' },
-                { id: 5, type: 'meeting', leadName: 'Sophia Williams', subject: 'Campus Tour Follow-up', timestamp: '2025-01-20T09:00:00Z', status: 'completed' }
-              ],
-              responseRates: {
-                email: 68,
-                call: 82,
-                text: 94
+          onClick={() => {
+            const emailCount = allCommunications.filter(c => c.type === 'EMAIL').length;
+            const callCount = allCommunications.filter(c => c.type === 'CALL').length;
+            const meetingCount = allCommunications.filter(c => c.type === 'MEETING').length;
+            const textCount = allCommunications.filter(c => c.type === 'TEXT').length;
+            const recentComms = allCommunications
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+              .slice(0, 10)
+              .map(comm => {
+                const lead = leadsData.find(l => l.id === comm.leadId);
+                return {
+                  id: comm.id,
+                  type: comm.type.toLowerCase(),
+                  leadName: lead?.name || 'Unknown Lead',
+                  subject: comm.summary,
+                  timestamp: comm.timestamp,
+                  status: 'completed'
+                };
+              });
+
+            setSelectedDashboardItem({
+              id: 'communications',
+              title: 'Communications',
+              value: allCommunications.length.toString(),
+              subtitle: `${emailCount} emails, ${callCount} calls`,
+              expandedData: {
+                summary: {
+                  totalThisMonth: allCommunications.length,
+                  emails: emailCount,
+                  calls: callCount,
+                  meetings: meetingCount,
+                  texts: textCount
+                },
+                recentActivity: recentComms,
+                responseRates: {
+                  email: 0,
+                  call: 0,
+                  text: 0
+                }
               }
-            }
-          })}
+            });
+          }}
           className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:bg-gray-50"
         >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Communications</p>
-              <p className="text-2xl font-bold text-gray-900">156</p>
+              <p className="text-2xl font-bold text-gray-900">{allCommunications.length}</p>
             </div>
             <FiMessageSquare className="w-8 h-8 text-cyan-500" />
           </div>
-          <p className="text-sm text-gray-600 mt-2">89 emails, 67 calls</p>
+          <p className="text-sm text-gray-600 mt-2">
+            {allCommunications.filter(c => c.type === 'EMAIL').length} emails, {allCommunications.filter(c => c.type === 'CALL').length} calls
+          </p>
         </div>
       </div>
 
@@ -893,7 +1121,7 @@ const Sales: React.FC = () => {
                       >
                         <div
                           className="cursor-pointer"
-                          onClick={() => setSelectedLead(lead)}
+                          onClick={() => handleSelectLead(lead)}
                         >
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1 min-w-0">
@@ -967,8 +1195,43 @@ const Sales: React.FC = () => {
                 <p className="text-sm text-gray-600">Parent: {selectedLead.parentName}</p>
               </div>
               <div className="flex items-center space-x-2">
+                {isEditing && (
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditForm(null);
+                    }}
+                    className="px-3 py-1 rounded-lg text-sm font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  >
+                    <FiX className="w-4 h-4 inline mr-1" />
+                    Cancel
+                  </button>
+                )}
                 <button
-                  onClick={() => setIsEditing(!isEditing)}
+                  onClick={async () => {
+                    if (isEditing && editForm && selectedLead?.id) {
+                      // Save changes
+                      try {
+                        await salesService.updateLead(selectedLead.id, editForm);
+                        // Reload all data
+                        await loadAllData();
+                        // Update selected lead with new data
+                        const updatedLead = leadsData.find(l => l.id === selectedLead.id);
+                        if (updatedLead) {
+                          setSelectedLead(updatedLead);
+                        }
+                        setIsEditing(false);
+                        setEditForm(null);
+                        alert('✅ Lead updated successfully!');
+                      } catch (error: any) {
+                        alert('Failed to save changes: ' + error.message);
+                      }
+                    } else {
+                      // Enter edit mode
+                      setIsEditing(true);
+                      setEditForm({ ...selectedLead });
+                    }
+                  }}
                   className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                     isEditing
                       ? 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -988,7 +1251,11 @@ const Sales: React.FC = () => {
                   )}
                 </button>
                 <button
-                  onClick={() => setSelectedLead(null)}
+                  onClick={() => {
+                    setSelectedLead(null);
+                    setIsEditing(false);
+                    setEditForm(null);
+                  }}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <FiX className="w-5 h-5 text-gray-500" />
@@ -1009,7 +1276,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
                     <input
                       type="text"
-                      value={selectedLead.name}
+                      value={isEditing && editForm ? editForm.name : selectedLead.name}
+                      onChange={(e) => isEditing && setEditForm({...editForm, name: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1018,7 +1286,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Parent/Guardian Name</label>
                     <input
                       type="text"
-                      value={selectedLead.parentName}
+                      value={isEditing && editForm ? editForm.parentName : selectedLead.parentName}
+                      onChange={(e) => isEditing && setEditForm({...editForm, parentName: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1027,7 +1296,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Grade Level</label>
                     <input
                       type="text"
-                      value={selectedLead.grade}
+                      value={isEditing && editForm ? editForm.grade : selectedLead.grade}
+                      onChange={(e) => isEditing && setEditForm({...editForm, grade: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1036,7 +1306,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Program Interest</label>
                     <input
                       type="text"
-                      value={selectedLead.program}
+                      value={isEditing && editForm ? editForm.program : selectedLead.program}
+                      onChange={(e) => isEditing && setEditForm({...editForm, program: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1045,7 +1316,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
                     <input
                       type="text"
-                      value={selectedLead.source}
+                      value={isEditing && editForm ? editForm.source : selectedLead.source}
+                      onChange={(e) => isEditing && setEditForm({...editForm, source: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1054,7 +1326,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Enrollment Term</label>
                     <input
                       type="text"
-                      value={selectedLead.enrollmentTerm}
+                      value={isEditing && editForm ? editForm.enrollmentTerm : selectedLead.enrollmentTerm}
+                      onChange={(e) => isEditing && setEditForm({...editForm, enrollmentTerm: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1073,7 +1346,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
                     <input
                       type="email"
-                      value={selectedLead.email}
+                      value={isEditing && editForm ? editForm.email : selectedLead.email}
+                      onChange={(e) => isEditing && setEditForm({...editForm, email: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1082,7 +1356,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                     <input
                       type="text"
-                      value={selectedLead.phone}
+                      value={isEditing && editForm ? editForm.phone : selectedLead.phone}
+                      onChange={(e) => isEditing && setEditForm({...editForm, phone: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1090,7 +1365,8 @@ const Sales: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Contact Method</label>
                     <select
-                      value={selectedLead.preferredContactMethod || 'email'}
+                      value={isEditing && editForm ? (editForm.preferredContactMethod || 'email') : (selectedLead.preferredContactMethod || 'email')}
+                      onChange={(e) => isEditing && setEditForm({...editForm, preferredContactMethod: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     >
@@ -1103,7 +1379,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Recruiter</label>
                     <input
                       type="text"
-                      value={selectedLead.assignedRecruiter || ''}
+                      value={isEditing && editForm ? (editForm.assignedRecruiter || '') : (selectedLead.assignedRecruiter || '')}
+                      onChange={(e) => isEditing && setEditForm({...editForm, assignedRecruiter: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1121,7 +1398,8 @@ const Sales: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Current Status</label>
                     <select
-                      value={selectedLead.status}
+                      value={isEditing && editForm ? editForm.status : selectedLead.status}
+                      onChange={(e) => isEditing && setEditForm({...editForm, status: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     >
@@ -1133,19 +1411,21 @@ const Sales: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Priority Level</label>
                     <select
-                      value={selectedLead.priority}
+                      value={isEditing && editForm ? editForm.priority : selectedLead.priority}
+                      onChange={(e) => isEditing && setEditForm({...editForm, priority: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Application Fee Status</label>
                     <select
-                      value={selectedLead.applicationFeeStatus ? 'paid' : 'pending'}
+                      value={isEditing && editForm ? (editForm.applicationFeeStatus ? 'paid' : 'pending') : (selectedLead.applicationFeeStatus ? 'paid' : 'pending')}
+                      onChange={(e) => isEditing && setEditForm({...editForm, applicationFeeStatus: e.target.value === 'paid'})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     >
@@ -1157,7 +1437,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Submission Date</label>
                     <input
                       type="date"
-                      value={selectedLead.submissionDate || ''}
+                      value={isEditing && editForm ? (editForm.submissionDate || '') : (selectedLead.submissionDate || '')}
+                      onChange={(e) => isEditing && setEditForm({...editForm, submissionDate: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1166,7 +1447,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Interview Date</label>
                     <input
                       type="date"
-                      value={selectedLead.interviewDate || ''}
+                      value={isEditing && editForm ? (editForm.interviewDate || '') : (selectedLead.interviewDate || '')}
+                      onChange={(e) => isEditing && setEditForm({...editForm, interviewDate: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1175,7 +1457,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Interviewer</label>
                     <input
                       type="text"
-                      value={selectedLead.interviewer || ''}
+                      value={isEditing && editForm ? (editForm.interviewer || '') : (selectedLead.interviewer || '')}
+                      onChange={(e) => isEditing && setEditForm({...editForm, interviewer: e.target.value})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1184,7 +1467,8 @@ const Sales: React.FC = () => {
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status Notes</label>
                   <textarea
-                    value={selectedLead.statusNotes || ''}
+                    value={isEditing && editForm ? (editForm.statusNotes || '') : (selectedLead.statusNotes || '')}
+                    onChange={(e) => isEditing && setEditForm({...editForm, statusNotes: e.target.value})}
                     disabled={!isEditing}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
@@ -1199,24 +1483,33 @@ const Sales: React.FC = () => {
                   Task Checklist
                 </h3>
                 <div className="space-y-3">
-                  {selectedLead.taskChecklist?.map((task: any) => (
+                  {selectedLeadTasks.map((task: Task) => (
                     <div key={task.id} className="flex items-center justify-between bg-white p-3 rounded-lg border">
                       <div className="flex items-center space-x-3">
                         <input
                           type="checkbox"
                           checked={task.completed}
-                          disabled={!isEditing}
-                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                          onChange={async (e) => {
+                            if (task.id) {
+                              await salesService.updateTask(task.id, { completed: e.target.checked });
+                              const updated = await salesService.getLeadTasks(selectedLead.id!);
+                              setSelectedLeadTasks(updated);
+                            }
+                          }}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
                         />
                         <span className={`text-sm ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                           {task.title}
                         </span>
                       </div>
-                      <span className="text-xs text-gray-500">{task.dueDate}</span>
+                      <span className="text-xs text-gray-500">{task.dueDate || 'No date'}</span>
                     </div>
                   ))}
                   {isEditing && (
-                    <button className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 transition-colors">
+                    <button
+                      onClick={() => setShowTaskModal(true)}
+                      className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 transition-colors"
+                    >
                       <FiPlus className="w-4 h-4 inline mr-2" />
                       Add Task
                     </button>
@@ -1231,14 +1524,16 @@ const Sales: React.FC = () => {
                   Communication Log
                 </h3>
                 <div className="space-y-3">
-                  {selectedLead.communicationLog?.map((comm: any) => (
+                  {selectedLeadComms.map((comm: Communication) => (
                     <div key={comm.id} className="bg-white p-3 rounded-lg border">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            comm.type === 'email' ? 'bg-blue-100 text-blue-700' :
-                            comm.type === 'call' ? 'bg-green-100 text-green-700' :
-                            'bg-purple-100 text-purple-700'
+                            comm.type === 'EMAIL' ? 'bg-blue-100 text-blue-700' :
+                            comm.type === 'CALL' ? 'bg-green-100 text-green-700' :
+                            comm.type === 'MEETING' ? 'bg-purple-100 text-purple-700' :
+                            comm.type === 'TEXT' ? 'bg-pink-100 text-pink-700' :
+                            'bg-gray-100 text-gray-700'
                           }`}>
                             {comm.type}
                           </span>
@@ -1256,7 +1551,10 @@ const Sales: React.FC = () => {
                     </div>
                   ))}
                   {isEditing && (
-                    <button className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 transition-colors">
+                    <button
+                      onClick={() => setShowCommModal(true)}
+                      className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 transition-colors"
+                    >
                       <FiPlus className="w-4 h-4 inline mr-2" />
                       Add Communication
                     </button>
@@ -1275,7 +1573,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Tuition Value</label>
                     <input
                       type="number"
-                      value={selectedLead.estimatedTuitionValue || ''}
+                      value={isEditing && editForm ? (editForm.estimatedTuitionValue || '') : (selectedLead.estimatedTuitionValue || '')}
+                      onChange={(e) => isEditing && setEditForm({...editForm, estimatedTuitionValue: parseFloat(e.target.value) || 0})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1283,7 +1582,8 @@ const Sales: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship Requested</label>
                     <select
-                      value={selectedLead.scholarshipRequested ? 'yes' : 'no'}
+                      value={isEditing && editForm ? (editForm.scholarshipRequested ? 'yes' : 'no') : (selectedLead.scholarshipRequested ? 'yes' : 'no')}
+                      onChange={(e) => isEditing && setEditForm({...editForm, scholarshipRequested: e.target.value === 'yes'})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     >
@@ -1295,7 +1595,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship Amount</label>
                     <input
                       type="number"
-                      value={selectedLead.scholarshipAmount || ''}
+                      value={isEditing && editForm ? (editForm.scholarshipAmount || '') : (selectedLead.scholarshipAmount || '')}
+                      onChange={(e) => isEditing && setEditForm({...editForm, scholarshipAmount: parseFloat(e.target.value) || 0})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1304,7 +1605,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tuition Paid</label>
                     <input
                       type="number"
-                      value={selectedLead.tuitionPaid || ''}
+                      value={isEditing && editForm ? (editForm.tuitionPaid || '') : (selectedLead.tuitionPaid || '')}
+                      onChange={(e) => isEditing && setEditForm({...editForm, tuitionPaid: parseFloat(e.target.value) || 0})}
                       disabled={!isEditing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     />
@@ -1313,7 +1615,8 @@ const Sales: React.FC = () => {
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship Notes</label>
                   <textarea
-                    value={selectedLead.scholarshipNotes || ''}
+                    value={isEditing && editForm ? (editForm.scholarshipNotes || '') : (selectedLead.scholarshipNotes || '')}
+                    onChange={(e) => isEditing && setEditForm({...editForm, scholarshipNotes: e.target.value})}
                     disabled={!isEditing}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
@@ -1328,7 +1631,8 @@ const Sales: React.FC = () => {
                   Notes
                 </h3>
                 <textarea
-                  value={selectedLead.notes}
+                  value={isEditing && editForm ? (editForm.notes || '') : (selectedLead.notes || '')}
+                  onChange={(e) => isEditing && setEditForm({...editForm, notes: e.target.value})}
                   disabled={!isEditing}
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
@@ -1353,7 +1657,11 @@ const Sales: React.FC = () => {
                 </button>
               </div>
               <button
-                onClick={() => setSelectedLead(null)}
+                onClick={() => {
+                  setSelectedLead(null);
+                  setIsEditing(false);
+                  setEditForm(null);
+                }}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Close
@@ -1388,6 +1696,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Student Name *</label>
                     <input
                       type="text"
+                      value={newLead.name}
+                      onChange={(e) => setNewLead({...newLead, name: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter student name"
                     />
@@ -1396,13 +1706,18 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Parent/Guardian Name *</label>
                     <input
                       type="text"
+                      value={newLead.parentName}
+                      onChange={(e) => setNewLead({...newLead, parentName: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter parent name"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Grade Level *</label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select
+                      value={newLead.grade}
+                      onChange={(e) => setNewLead({...newLead, grade: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <option value="">Select grade</option>
                       <option value="K">Kindergarten</option>
                       <option value="1st Grade">1st Grade</option>
@@ -1421,7 +1736,10 @@ const Sales: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Program Interest</label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select
+                      value={newLead.program}
+                      onChange={(e) => setNewLead({...newLead, program: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <option value="">Select program</option>
                       <option value="STEM Program">STEM Program</option>
                       <option value="IB Program">IB Program</option>
@@ -1433,7 +1751,10 @@ const Sales: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Enrollment Term</label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select
+                      value={newLead.enrollmentTerm}
+                      onChange={(e) => setNewLead({...newLead, enrollmentTerm: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <option value="">Select term</option>
                       <option value="Fall 2025">Fall 2025</option>
                       <option value="Spring 2026">Spring 2026</option>
@@ -1442,7 +1763,10 @@ const Sales: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select
+                      value={newLead.source}
+                      onChange={(e) => setNewLead({...newLead, source: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <option value="">Select source</option>
                       <option value="School Fair">School Fair</option>
                       <option value="Website">Website</option>
@@ -1463,6 +1787,8 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
                     <input
                       type="email"
+                      value={newLead.email}
+                      onChange={(e) => setNewLead({...newLead, email: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter email address"
                     />
@@ -1471,24 +1797,21 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
                     <input
                       type="tel"
+                      value={newLead.phone}
+                      onChange={(e) => setNewLead({...newLead, phone: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter phone number"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Contact Method</label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="email">Email</option>
-                      <option value="phone">Phone</option>
-                      <option value="text">Text Message</option>
-                    </select>
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Priority Level</label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="low">Low</option>
+                    <select
+                      value={newLead.priority}
+                      onChange={(e) => setNewLead({...newLead, priority: e.target.value as 'LOW' | 'MEDIUM' | 'HIGH'})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High</option>
                     </select>
                   </div>
                 </div>
@@ -1510,15 +1833,10 @@ const Sales: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Tuition Value</label>
                     <input
                       type="number"
+                      value={newLead.estimatedTuitionValue}
+                      onChange={(e) => setNewLead({...newLead, estimatedTuitionValue: parseFloat(e.target.value) || 0})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter estimated value"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Follow-up Date</label>
-                    <input
-                      type="date"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -1526,6 +1844,8 @@ const Sales: React.FC = () => {
                   <input
                     type="checkbox"
                     id="scholarshipRequested"
+                    checked={newLead.scholarshipRequested}
+                    onChange={(e) => setNewLead({...newLead, scholarshipRequested: e.target.checked})}
                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                   />
                   <label htmlFor="scholarshipRequested" className="ml-2 text-sm text-gray-700">
@@ -1544,6 +1864,7 @@ const Sales: React.FC = () => {
                 Cancel
               </button>
               <button
+                onClick={handleCreateLead}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Add Lead
@@ -1729,39 +2050,56 @@ const Sales: React.FC = () => {
                 <>
                   {/* Events List */}
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Events</h3>
-                    <div className="space-y-4">
-                      {selectedDashboardItem.expandedData.events.map((event: any) => (
-                        <div key={event.id} className="bg-white p-4 rounded-lg border border-gray-200">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-semibold text-gray-900">{event.title}</h4>
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              event.type === 'Open House' ? 'bg-blue-100 text-blue-700' :
-                              event.type === 'Virtual' ? 'bg-purple-100 text-purple-700' :
-                              event.type === 'Tour' ? 'bg-green-100 text-green-700' :
-                              event.type === 'Showcase' ? 'bg-orange-100 text-orange-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {event.type}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                            <div className="flex items-center">
-                              <FiCalendar className="w-4 h-4 mr-2" />
-                              {new Date(event.date).toLocaleDateString()} at {event.time}
-                            </div>
-                            <div className="flex items-center">
-                              <FiMapPin className="w-4 h-4 mr-2" />
-                              {event.location}
-                            </div>
-                            <div className="flex items-center">
-                              <FiUsers className="w-4 h-4 mr-2" />
-                              {event.attendees} attendees expected
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
+                      <button
+                        onClick={() => alert('Event creation functionality coming soon!')}
+                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-2"
+                      >
+                        <FiPlus className="w-4 h-4" />
+                        <span>Create Event</span>
+                      </button>
                     </div>
+                    {selectedDashboardItem.expandedData.events.length > 0 ? (
+                      <div className="space-y-4">
+                        {selectedDashboardItem.expandedData.events.map((event: any) => (
+                          <div key={event.id} className="bg-white p-4 rounded-lg border border-gray-200">
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-semibold text-gray-900">{event.title}</h4>
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                event.type === 'Open House' ? 'bg-blue-100 text-blue-700' :
+                                event.type === 'Virtual' ? 'bg-purple-100 text-purple-700' :
+                                event.type === 'Tour' ? 'bg-green-100 text-green-700' :
+                                event.type === 'Showcase' ? 'bg-orange-100 text-orange-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {event.type}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                              <div className="flex items-center">
+                                <FiCalendar className="w-4 h-4 mr-2" />
+                                {new Date(event.date).toLocaleDateString()} at {event.time}
+                              </div>
+                              <div className="flex items-center">
+                                <FiMapPin className="w-4 h-4 mr-2" />
+                                {event.location}
+                              </div>
+                              <div className="flex items-center">
+                                <FiUsers className="w-4 h-4 mr-2" />
+                                {event.attendees} attendees expected
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                        <FiCalendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-600">No upcoming events scheduled</p>
+                        <p className="text-sm text-gray-500 mt-1">Click "Create Event" to add a new event</p>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -1774,33 +2112,13 @@ const Sales: React.FC = () => {
                     <div className="space-y-4">
                       {selectedDashboardItem.expandedData.sources.map((source: any, index: number) => (
                         <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
-                          <div className="flex justify-between items-center mb-2">
+                          <div className="flex justify-between items-center">
                             <h4 className="font-semibold text-gray-900">{source.source}</h4>
                             <div className="flex items-center space-x-2">
                               <span className="font-semibold">{source.count} leads</span>
                               <span className="text-gray-500">({source.percentage}%)</span>
-                              <span className={`text-sm ${source.trend.startsWith('+') ? 'text-green-600' : source.trend.startsWith('-') ? 'text-red-600' : 'text-gray-600'}`}>
-                                {source.trend}
-                              </span>
                             </div>
                           </div>
-                          <p className="text-sm text-gray-600">{source.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Top Performing Events */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Performing Events</h3>
-                    <div className="space-y-3">
-                      {selectedDashboardItem.expandedData.topPerformers.map((performer: any, index: number) => (
-                        <div key={index} className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200">
-                          <div>
-                            <span className="font-medium text-gray-900">{performer.name}</span>
-                            <span className="text-sm text-gray-500 block">{new Date(performer.date).toLocaleDateString()}</span>
-                          </div>
-                          <span className="font-semibold text-blue-600">{performer.leads} leads</span>
                         </div>
                       ))}
                     </div>
@@ -1866,6 +2184,28 @@ const Sales: React.FC = () => {
                       ))}
                     </div>
                   </div>
+
+                  {/* Upcoming Tasks (Next 5 Days) */}
+                  {selectedDashboardItem.expandedData.upcomingTasks && selectedDashboardItem.expandedData.upcomingTasks.length > 0 && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Tasks (Next 5 Days)</h3>
+                      <div className="space-y-3">
+                        {selectedDashboardItem.expandedData.upcomingTasks.map((task: any) => (
+                          <div key={task.id} className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h4 className="font-semibold text-gray-900">{task.leadName}</h4>
+                                <p className="text-sm text-gray-600">{task.notes}</p>
+                              </div>
+                              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+                                {task.dueDate}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -2151,6 +2491,89 @@ const Sales: React.FC = () => {
               >
                 Delete Column & Move Leads
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Modal */}
+      {showTaskModal && selectedLead && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowTaskModal(false)}>
+          <div className="bg-white rounded-lg p-6 w-96" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">Create Task for {selectedLead.name}</h3>
+            <input
+              type="text"
+              placeholder="Task title"
+              value={taskForm.title}
+              onChange={(e) => setTaskForm({...taskForm, title: e.target.value})}
+              className="w-full p-2 border rounded mb-3"
+            />
+            <input
+              type="date"
+              value={taskForm.dueDate}
+              onChange={(e) => setTaskForm({...taskForm, dueDate: e.target.value})}
+              className="w-full p-2 border rounded mb-4"
+            />
+            <div className="flex justify-end space-x-2">
+              <button onClick={() => setShowTaskModal(false)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+              <button onClick={async () => {
+                if (!taskForm.title) { alert('Please enter a task title'); return; }
+                try {
+                  await salesService.createTask({ leadId: selectedLead.id!, title: taskForm.title, dueDate: taskForm.dueDate, completed: false });
+                  const updatedTasks = await salesService.getLeadTasks(selectedLead.id!);
+                  setSelectedLeadTasks(updatedTasks);
+                  setShowTaskModal(false);
+                  setTaskForm({ title: '', dueDate: '' });
+                  await loadAllData();
+                  alert('✅ Task created successfully!');
+                } catch (error: any) {
+                  alert('Failed to create task: ' + error.message);
+                }
+              }} className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700">Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Communication Modal */}
+      {showCommModal && selectedLead && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowCommModal(false)}>
+          <div className="bg-white rounded-lg p-6 w-96" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">Log Communication for {selectedLead.name}</h3>
+            <select
+              value={commForm.type}
+              onChange={(e) => setCommForm({...commForm, type: e.target.value as any})}
+              className="w-full p-2 border rounded mb-3"
+            >
+              <option value="CALL">Call</option>
+              <option value="EMAIL">Email</option>
+              <option value="MEETING">Meeting</option>
+              <option value="TEXT">Text</option>
+              <option value="OTHER">Other</option>
+            </select>
+            <textarea
+              placeholder="Summary of communication..."
+              value={commForm.summary}
+              onChange={(e) => setCommForm({...commForm, summary: e.target.value})}
+              className="w-full p-2 border rounded mb-4"
+              rows={4}
+            />
+            <div className="flex justify-end space-x-2">
+              <button onClick={() => setShowCommModal(false)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+              <button onClick={async () => {
+                if (!commForm.summary) { alert('Please enter a summary'); return; }
+                try {
+                  await salesService.createCommunication({ leadId: selectedLead.id!, type: commForm.type, summary: commForm.summary, timestamp: new Date().toISOString(), followUpRequired: false });
+                  const updatedComms = await salesService.getLeadCommunications(selectedLead.id!);
+                  setSelectedLeadComms(updatedComms);
+                  setShowCommModal(false);
+                  setCommForm({ type: 'CALL', summary: '' });
+                  await loadAllData();
+                  alert('✅ Communication logged successfully!');
+                } catch (error: any) {
+                  alert('Failed to log communication: ' + error.message);
+                }
+              }} className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700">Log</button>
             </div>
           </div>
         </div>

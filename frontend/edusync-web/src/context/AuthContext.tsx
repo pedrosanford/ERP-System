@@ -50,8 +50,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      const API_URL = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:8086';
-      const response = await fetch(`${API_URL}/auth/login`, {
+      // Use relative URL - Vite proxy will handle routing to Gateway
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,8 +84,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, password: string, name: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      const API_URL = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:8086';
-      const response = await fetch(`${API_URL}/auth/register`, {
+      // Use relative URL - Vite proxy will handle routing to Gateway
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

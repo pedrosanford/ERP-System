@@ -130,5 +130,4 @@ CREATE TABLE users (
 
 - Passwords are encrypted using BCrypt
 - JWT tokens are signed with HMAC SHA-256
-- CORS is configured for cross-origin requests
 - Input validation is implemented for all endpoints

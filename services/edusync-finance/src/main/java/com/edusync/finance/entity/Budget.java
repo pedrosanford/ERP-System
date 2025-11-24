@@ -3,6 +3,7 @@ package com.edusync.finance.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -95,7 +96,7 @@ public class Budget {
             return 0;
         }
         return spent.multiply(BigDecimal.valueOf(100))
-                   .divide(amount, 0, BigDecimal.ROUND_HALF_UP)
+                   .divide(amount, 0, RoundingMode.HALF_UP)
                    .intValue();
     }
     

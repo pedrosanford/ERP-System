@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FiPlus, 
   FiEdit, 
@@ -12,6 +12,8 @@ import {
   FiUserX,
   FiTrash2
 } from 'react-icons/fi';
+import authService from '../../../services/authService';
+import type { UserDTO } from '../../../services/authService';
 
 interface User {
   id: string;
@@ -19,7 +21,7 @@ interface User {
   email: string;
   role: string;
   status: 'active' | 'inactive' | 'pending';
-  lastActive: string;
+  lastActive: string | null;
   permissions: string[];
 }
 
@@ -52,46 +54,43 @@ const UserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'pending'>('all');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // Mock data
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      name: 'Pedro Sanford',
-      email: 'pedro@edusync.com',
-      role: 'Administrator',
-      status: 'active',
-      lastActive: '2025-09-23T10:30:00Z',
-      permissions: ['all']
-    },
-    {
-      id: '2',
-      name: 'Sarah Johnson',
-      email: 'sarah@edusync.com',
-      role: 'HR Manager',
-      status: 'active',
-      lastActive: '2025-09-23T09:15:00Z',
-      permissions: ['hr', 'students', 'staff']
-    },
-    {
-      id: '3',
-      name: 'Mike Chen',
-      email: 'mike@edusync.com',
-      role: 'Finance Manager',
-      status: 'active',
-      lastActive: '2025-09-22T16:45:00Z',
-      permissions: ['finance', 'reports']
-    },
-    {
-      id: '4',
-      name: 'Lisa Rodriguez',
-      email: 'lisa@edusync.com',
-      role: 'Sales Representative',
-      status: 'inactive',
-      lastActive: '2025-09-20T14:20:00Z',
-      permissions: ['sales', 'leads']
-    }
-  ]);
+  // Real data from backend
+  const [users, setUsers] = useState<User[]>([]);
+
+  // Load users from backend
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const userDTOs = await authService.getAllUsers();
+        
+        // Transform UserDTO to User format
+        const transformedUsers: User[] = userDTOs.map((userDTO: UserDTO) => ({
+          id: userDTO.id.toString(),
+          name: userDTO.name || 'N/A',
+          email: userDTO.email || 'N/A',
+          role: userDTO.role || 'N/A',
+          status: userDTO.enabled ? 'active' : 'inactive',
+          lastActive: userDTO.updatedAt || null, // Use updatedAt as lastActive, or null if not available
+          permissions: [] // Permissions not available from backend
+        }));
+        
+        setUsers(transformedUsers);
+      } catch (err: any) {
+        console.error('Error loading users:', err);
+        const errorMessage = err?.message || 'Failed to load users. Please try again later.';
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
 
   const [roles, setRoles] = useState<Role[]>([
     {
@@ -187,14 +186,19 @@ const UserManagement: React.FC = () => {
     return `px-2 py-1 text-xs font-medium rounded-full ${styles[status as keyof typeof styles]}`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return 'N/A';
+    }
   };
 
   // Filter users based on search and filters
@@ -653,30 +657,52 @@ const UserManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* Users Table */}
-          <div className="bg-white overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-300">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Last Active
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((user) => (
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="bg-white overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg p-8">
+              <div className="text-center">
+                <p className="text-gray-500">Loading users...</p>
+              </div>
+            </div>
+          ) : (
+            /* Users Table */
+            <div className="bg-white overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Last Active
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                        No users found
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -694,7 +720,7 @@ const UserManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{user.role}</div>
+                      <div className="text-sm text-gray-900">{user.role || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={getStatusBadge(user.status)}>
@@ -743,10 +769,12 @@ const UserManagement: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

@@ -4,6 +4,7 @@ import com.edusync.student.entity.Student;
 import com.edusync.student.entity.Student.StudentStatus;
 import com.edusync.student.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +26,7 @@ public class StudentService {
         return studentRepository.findAll();
     }
     
-    public Optional<Student> getStudentById(Long id) {
+    public Optional<Student> getStudentById(@NonNull Long id) {
         return studentRepository.findById(id);
     }
     
@@ -55,7 +56,7 @@ public class StudentService {
         return studentRepository.save(student);
     }
     
-    public Student updateStudent(Long id, Student studentDetails) {
+    public Student updateStudent(@NonNull Long id, Student studentDetails) {
         Student student = studentRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Student not found with id: " + id));
         
@@ -93,7 +94,7 @@ public class StudentService {
         return studentRepository.save(student);
     }
     
-    public void deleteStudent(Long id) {
+    public void deleteStudent(@NonNull Long id) {
         if (!studentRepository.existsById(id)) {
             throw new IllegalArgumentException("Student not found with id: " + id);
         }

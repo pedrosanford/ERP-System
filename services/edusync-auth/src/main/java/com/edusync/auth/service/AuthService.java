@@ -3,6 +3,7 @@ package com.edusync.auth.service;
 import com.edusync.auth.dto.AuthResponse;
 import com.edusync.auth.dto.LoginRequest;
 import com.edusync.auth.dto.RegisterRequest;
+import com.edusync.auth.dto.UserDTO;
 import com.edusync.auth.entity.User;
 import com.edusync.auth.repository.UserRepository;
 import com.edusync.auth.util.JwtUtil;
@@ -15,7 +16,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AuthService {
@@ -116,5 +119,20 @@ public class AuthService {
         } catch (Exception e) {
             return new AuthResponse(false, "Failed to get current user: " + e.getMessage());
         }
+    }
+    
+    public List<UserDTO> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .map(user -> new UserDTO(
+                    user.getId(),
+                    user.getName(),
+                    user.getEmail(),
+                    user.getRole().name(),
+                    user.getEnabled(),
+                    user.getCreatedAt(),
+                    user.getUpdatedAt()
+                ))
+                .collect(Collectors.toList());
     }
 }

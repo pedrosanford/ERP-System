@@ -6,6 +6,7 @@ import com.edusync.finance.entity.Transaction.TransactionStatus;
 import com.edusync.finance.entity.Transaction.TransactionType;
 import com.edusync.finance.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +34,7 @@ public class TransactionService {
         return transactionRepository.findAll();
     }
     
-    public Optional<Transaction> getTransactionById(Long id) {
+    public Optional<Transaction> getTransactionById(@NonNull Long id) {
         return transactionRepository.findById(id);
     }
     
@@ -62,11 +63,11 @@ public class TransactionService {
         return transactionRepository.findByTypeAndDateBetween(type, startDate, endDate);
     }
     
-    public List<Transaction> getTransactionsByStudentId(Long studentId) {
+    public List<Transaction> getTransactionsByStudentId(@NonNull Long studentId) {
         return transactionRepository.findByStudentId(studentId);
     }
     
-    public List<Transaction> getTransactionsByStaffId(Long staffId) {
+    public List<Transaction> getTransactionsByStaffId(@NonNull Long staffId) {
         return transactionRepository.findByStaffId(staffId);
     }
     
@@ -110,7 +111,7 @@ public class TransactionService {
         return transactionRepository.save(transaction);
     }
     
-    public Transaction updateTransaction(Long id, Transaction transactionDetails) {
+    public Transaction updateTransaction(@NonNull Long id, Transaction transactionDetails) {
         Transaction transaction = transactionRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Transaction not found with id: " + id));
         
@@ -131,7 +132,7 @@ public class TransactionService {
         return transactionRepository.save(transaction);
     }
     
-    public Transaction updateTransactionStatus(Long id, TransactionStatus status) {
+    public Transaction updateTransactionStatus(@NonNull Long id, TransactionStatus status) {
         Transaction transaction = transactionRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Transaction not found with id: " + id));
         
@@ -139,7 +140,7 @@ public class TransactionService {
         return transactionRepository.save(transaction);
     }
     
-    public void deleteTransaction(Long id) {
+    public void deleteTransaction(@NonNull Long id) {
         if (!transactionRepository.existsById(id)) {
             throw new RuntimeException("Transaction not found with id: " + id);
         }

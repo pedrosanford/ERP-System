@@ -9,8 +9,8 @@ const AuthTest: React.FC = () => {
     setResult('Testing...');
     
     try {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8086';
-                const response = await fetch(`${API_URL}/api/auth/register`, {
+                // Use relative URL - Vite proxy will handle routing to Gateway
+                const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

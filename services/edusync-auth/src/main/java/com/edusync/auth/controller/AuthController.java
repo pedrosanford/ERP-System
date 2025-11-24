@@ -3,11 +3,14 @@ package com.edusync.auth.controller;
 import com.edusync.auth.dto.AuthResponse;
 import com.edusync.auth.dto.LoginRequest;
 import com.edusync.auth.dto.RegisterRequest;
+import com.edusync.auth.dto.UserDTO;
 import com.edusync.auth.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/auth")
@@ -47,5 +50,11 @@ public class AuthController {
         } else {
             return ResponseEntity.badRequest().body(response);
         }
+    }
+    
+    @GetMapping("/users")
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
+        List<UserDTO> users = authService.getAllUsers();
+        return ResponseEntity.ok(users);
     }
 }

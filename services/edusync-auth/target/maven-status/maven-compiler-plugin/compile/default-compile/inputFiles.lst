@@ -1,11 +1,13 @@
 /Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/dto/AuthResponse.java
 /Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/AuthApplication.java
 /Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/service/AuthService.java
+/Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/dto/UserDTO.java
+/Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/util/JwtUtil.java
+/Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/dto/RegisterRequest.java
+/Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/entity/User.java
 /Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/dto/LoginRequest.java
 /Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/service/CustomUserDetailsService.java
 /Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/config/SecurityConfig.java
 /Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/controller/AuthController.java
-/Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/util/JwtUtil.java
-/Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/dto/RegisterRequest.java
+/Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/filter/JwtAuthenticationFilter.java
 /Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/repository/UserRepository.java
-/Users/stam7/Documents/Coding Workspace/ERP/ERP-System/services/edusync-auth/src/main/java/com/edusync/auth/entity/User.java

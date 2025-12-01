@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import Sidebar from './Sidebar';
 import Dashboard from '../pages/Dashboard';
 import Students from './sections/HR-Management/Students.tsx';
@@ -9,6 +10,7 @@ import Sales from './sections/Sales';
 import EmailTemplates from './sections/sales/EmailTemplates';
 import ProfileSettings from './sections/ProfileSettings';
 import Settings from './sections/settings/Settings';
+import NotificationDropdown from './NotificationDropdown';
 import { FiMenu, FiBell, FiSearch, FiUser, FiLogOut } from 'react-icons/fi';
 import Staff from "./sections/HR-Management/Staff.tsx";
 import DocumentUpload from "./sections/HR-Management/DocumentUpload.tsx";
@@ -19,12 +21,14 @@ interface LayoutProps {}
 const Layout: React.FC<LayoutProps> = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   // Load active section from localStorage or default to 'dashboard'
   const [activeSection, setActiveSection] = useState(() => {
     return localStorage.getItem('activeSection') || 'dashboard';
   });
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Save activeSection to localStorage whenever it changes
@@ -147,10 +151,26 @@ const Layout: React.FC<LayoutProps> = () => {
             {/* Right side actions */}
             <div className="flex items-center space-x-3">
               {/* Notifications */}
-              <button className="relative p-1.5 rounded-md hover:bg-gray-100 transition-colors">
-                <FiBell className="w-4 h-4 text-gray-600" />
-                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  <FiBell className="w-4 h-4 text-gray-600" />
+                  {unreadCount > 0 && (
+                    <>
+                      <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    </>
+                  )}
+                </button>
+                <NotificationDropdown 
+                  isOpen={showNotifications}
+                  onClose={() => setShowNotifications(false)}
+                />
+              </div>
 
               {/* User avatar */}
               <div className="relative" ref={userMenuRef}>

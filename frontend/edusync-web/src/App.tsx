@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ModuleProvider } from './context/ModuleContext';
+import { NotificationProvider } from './context/NotificationContext';
 import Layout from './components/Layout';
 import AuthPage from './pages/AuthPage';
 import Dashboard from "./pages/Dashboard.tsx";
@@ -41,31 +42,33 @@ function App() {
   return (
     <AuthProvider>
       <ModuleProvider>
-        <Router>
-        <Routes>
-          <Route 
-            path="/auth" 
-            element={
-              <PublicRoute>
-                <AuthPage />
-              </PublicRoute>
-            } 
-          />
-            <Route
-                path="/dashboard"
-                element={
-                    <ProtectedRoute>
-                        <Layout>
-                            <Dashboard />
-                        </Layout>
-                    </ProtectedRoute>
-                }
+        <NotificationProvider>
+          <Router>
+          <Routes>
+            <Route 
+              path="/auth" 
+              element={
+                <PublicRoute>
+                  <AuthPage />
+                </PublicRoute>
+              } 
             />
+              <Route
+                  path="/dashboard"
+                  element={
+                      <ProtectedRoute>
+                          <Layout>
+                              <Dashboard />
+                          </Layout>
+                      </ProtectedRoute>
+                  }
+              />
 
-            <Route path="/test" element={<AuthTest />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-        </Router>
+              <Route path="/test" element={<AuthTest />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+          </Router>
+        </NotificationProvider>
       </ModuleProvider>
     </AuthProvider>
   );

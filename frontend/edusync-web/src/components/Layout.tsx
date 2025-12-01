@@ -146,12 +146,20 @@ const Layout: React.FC<LayoutProps> = () => {
               {/* User avatar */}
               <div className="relative" ref={userMenuRef}>
                 <div 
-                  className="w-7 h-7 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center cursor-pointer hover:shadow-md transition-shadow"
+                  className="w-7 h-7 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center cursor-pointer hover:shadow-md transition-shadow overflow-hidden"
                   onClick={() => setShowUserMenu(!showUserMenu)}
                 >
-                  <span className="text-white font-medium text-xs">
-                    {user ? user.name.split(' ').map(n => n[0]).join('') : 'PS'}
-                  </span>
+                  {user?.avatarData ? (
+                    <img 
+                      src={user.avatarData} 
+                      alt="User avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-white font-medium text-xs">
+                      {user ? user.name.split(' ').map(n => n[0]).join('') : 'PS'}
+                    </span>
+                  )}
                 </div>
                 
                 {/* User dropdown menu */}

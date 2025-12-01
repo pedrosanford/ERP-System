@@ -14,6 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/communications")
 @CrossOrigin(origins = "*")
+@SuppressWarnings("null")
 public class CommunicationController {
 
     @Autowired

@@ -151,7 +151,7 @@ const Dashboard: React.FC = () => {
       setRecentActivities(activities.slice(0, 5));
 
       // Prepare chart data
-      prepareChartData(transactions, students, studentStats.totalStudents || 0);
+      prepareChartData(transactions, students);
     } catch (error) {
       console.error('Failed to fetch dashboard stats:', error);
     } finally {
@@ -181,7 +181,7 @@ const Dashboard: React.FC = () => {
     }).format(amount);
   };
 
-  const prepareChartData = (transactions: Transaction[], students: Student[], totalStudents: number) => {
+  const prepareChartData = (transactions: Transaction[], students: Student[]) => {
     // Prepare revenue/expense data for last 6 months
     const now = new Date();
     const months: Array<{ month: string; revenue: number; expenses: number }> = [];
@@ -214,11 +214,23 @@ const Dashboard: React.FC = () => {
       }
     });
 
-    // Prepare student growth data (simulated based on current count)
-    const studentGrowthData = months.map((m, index) => ({
-      month: m.month,
-      students: Math.max(0, totalStudents - (5 - index) * Math.floor(totalStudents / 6))
-    }));
+    // Prepare student growth data based on actual enrollment dates
+    const studentGrowthData = months.map((m, index) => {
+      const chartDate = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      const endOfMonth = new Date(chartDate.getFullYear(), chartDate.getMonth() + 1, 0);
+      
+      // Count students enrolled up to this month
+      const studentsUpToMonth = students.filter(s => {
+        if (!s.enrollmentDate) return false;
+        const enrollDate = new Date(s.enrollmentDate);
+        return enrollDate <= endOfMonth;
+      }).length;
+      
+      return {
+        month: m.month,
+        students: studentsUpToMonth
+      };
+    });
 
     // Prepare program distribution data
     const programCounts: Record<string, number> = {};

@@ -282,7 +282,6 @@ docker exec erp-system-postgres-1 psql -U edusync -d edusync_erp -c "SELECT role
 - **HR**: http://localhost:8082
 - **Student**: http://localhost:8083
 - **Sales**: http://localhost:8084
-- **Academics**: http://localhost:8085
 - **Auth**: http://localhost:8086
 - **PostgreSQL**: localhost:5432
 

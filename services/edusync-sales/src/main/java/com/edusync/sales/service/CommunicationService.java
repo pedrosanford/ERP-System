@@ -12,6 +12,7 @@ import java.util.Optional;
 
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class CommunicationService {
 
     private final CommunicationRepository communicationRepository;

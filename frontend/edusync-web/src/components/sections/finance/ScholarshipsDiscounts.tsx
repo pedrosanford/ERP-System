@@ -3,14 +3,17 @@ import { FiAward, FiPlus, FiEdit2, FiTrash2, FiTrendingUp } from 'react-icons/fi
 
 interface Scholarship {
   id: string;
+  studentId: string;
   studentName: string;
   grade: string;
   scholarshipType: string;
   amount: number;
   percentage: number;
-  status: 'Active' | 'Expired' | 'Pending';
+  status: 'Active' | 'Expired' | 'Pending' | 'ACTIVE' | 'PENDING' | 'COMPLETED' | 'CANCELLED';
   startDate: string;
   endDate: string;
+  academicYear?: string;
+  notes?: string;
 }
 
 interface ScholarshipFund {
@@ -23,7 +26,7 @@ interface ScholarshipFund {
 }
 
 const ScholarshipsDiscounts: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'scholarships' | 'adjustments' | 'monitoring'>('scholarships');
+  const [activeTab, setActiveTab] = useState<'scholarships' | 'monitoring'>('scholarships');
   const [showScholarshipModal, setShowScholarshipModal] = useState(false);
   const [editingScholarship, setEditingScholarship] = useState<Scholarship | null>(null);
   
@@ -39,30 +42,72 @@ const ScholarshipsDiscounts: React.FC = () => {
   });
   
   useEffect(() => {
-    // Students are loaded but not used in this component
+    loadScholarships();
   }, []);
+
+  const loadScholarships = async () => {
+    try {
+      console.log('Loading scholarships from API...');
+      const response = await fetch('/api/finance/scholarships');
+      console.log('Response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Received scholarships:', data.length);
+        
+        // Transform API data to match our interface
+        const transformedData = data.map((s: any) => ({
+          id: s.id.toString(),
+          studentId: s.studentId,
+          studentName: s.studentId, // We'll show student ID for now
+          grade: s.academicYear || 'N/A',
+          scholarshipType: s.scholarshipType,
+          amount: s.amount,
+          percentage: s.percentage || 0,
+          status: s.status,
+          startDate: new Date(s.createdAt).toLocaleDateString(),
+          endDate: s.academicYear || 'N/A',
+          academicYear: s.academicYear,
+          notes: s.notes
+        }));
+        
+        console.log('Transformed scholarships:', transformedData.length);
+        setScholarships(transformedData);
+      } else {
+        console.error('Failed to fetch scholarships, status:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to load scholarships:', error);
+    }
+  };
 
   // Real data (no mock)
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
 
-  const [funds] = useState<ScholarshipFund[]>([
-    {
-      id: 'FUND-001',
-      fundName: 'Merit Scholarship Fund',
-      totalAmount: 50000,
-      usedAmount: 15000,
-      availableAmount: 35000,
-      beneficiaries: 8
-    },
-    {
-      id: 'FUND-002',
-      fundName: 'Need-Based Fund',
-      totalAmount: 75000,
-      usedAmount: 45000,
-      availableAmount: 30000,
-      beneficiaries: 12
-    },
-  ]);
+  // Calculate funds from real scholarship data
+  const funds: ScholarshipFund[] = React.useMemo(() => {
+    const fundMap = new Map<string, { total: number; used: number; count: number }>();
+    
+    scholarships.forEach(s => {
+      if (s.status === 'ACTIVE' || s.status === 'Active') {
+        const existing = fundMap.get(s.scholarshipType) || { total: 0, used: 0, count: 0 };
+        fundMap.set(s.scholarshipType, {
+          total: existing.total + s.amount * 2, // Assume fund is 2x current usage
+          used: existing.used + s.amount,
+          count: existing.count + 1
+        });
+      }
+    });
+
+    return Array.from(fundMap.entries()).map(([name, data], idx) => ({
+      id: `FUND-${idx + 1}`,
+      fundName: `${name} Fund`,
+      totalAmount: data.total,
+      usedAmount: data.used,
+      availableAmount: data.total - data.used,
+      beneficiaries: data.count
+    }));
+  }, [scholarships]);
 
   const handleAddScholarship = () => {
     setEditingScholarship(null);
@@ -119,6 +164,7 @@ const ScholarshipsDiscounts: React.FC = () => {
     } else {
       const newScholarship: Scholarship = {
         id: `SCH-${String(scholarships.length + 1).padStart(3, '0')}`,
+        studentId: 'STU' + String(scholarships.length + 1).padStart(3, '0'),
         studentName: scholarshipForm.studentName,
         grade: scholarshipForm.grade,
         scholarshipType: scholarshipForm.scholarshipType,
@@ -171,8 +217,8 @@ const ScholarshipsDiscounts: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{scholarship.percentage}%</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    scholarship.status === 'Active' ? 'bg-green-100 text-green-800' :
-                    scholarship.status === 'Expired' ? 'bg-red-100 text-red-800' :
+                    scholarship.status === 'Active' || scholarship.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                    scholarship.status === 'Expired' || scholarship.status === 'COMPLETED' || scholarship.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
                     'bg-yellow-100 text-yellow-800'
                   }`}>
                     {scholarship.status}
@@ -196,50 +242,6 @@ const ScholarshipsDiscounts: React.FC = () => {
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
-  );
-
-  const renderAdjustments = () => (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900">Fee Adjustments</h3>
-      <p className="text-sm text-gray-600">
-        Apply scholarships and discounts directly to student tuition records. Adjustments are automatically calculated based on scholarship percentages.
-      </p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {scholarships.filter(s => s.status === 'Active').map((scholarship) => (
-          <div key={scholarship.id} className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h4 className="font-semibold text-gray-900">{scholarship.studentName}</h4>
-                <p className="text-sm text-gray-600">{scholarship.grade} • {scholarship.scholarshipType}</p>
-              </div>
-              <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                {scholarship.percentage}% OFF
-              </span>
-            </div>
-
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Original Tuition:</span>
-                <span className="font-medium text-gray-900">$5,000</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Scholarship Amount:</span>
-                <span className="font-medium text-red-600">-${scholarship.amount.toLocaleString()}</span>
-              </div>
-              <div className="border-t pt-2 flex justify-between">
-                <span className="font-semibold text-gray-900">Adjusted Fee:</span>
-                <span className="font-bold text-primary-600">${(5000 - scholarship.amount).toLocaleString()}</span>
-              </div>
-            </div>
-
-            <div className="text-xs text-gray-500">
-              Valid: {scholarship.startDate} to {scholarship.endDate}
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -328,16 +330,6 @@ const ScholarshipsDiscounts: React.FC = () => {
             Record Scholarships
           </button>
           <button
-            onClick={() => setActiveTab('adjustments')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'adjustments'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Adjust Fees
-          </button>
-          <button
             onClick={() => setActiveTab('monitoring')}
             className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === 'monitoring'
@@ -353,7 +345,6 @@ const ScholarshipsDiscounts: React.FC = () => {
       {/* Content */}
       <div className="mt-6">
         {activeTab === 'scholarships' && renderScholarships()}
-        {activeTab === 'adjustments' && renderAdjustments()}
         {activeTab === 'monitoring' && renderMonitoring()}
       </div>
 

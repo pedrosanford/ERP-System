@@ -13,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/tasks")
 @CrossOrigin(origins = "*")
+@SuppressWarnings("null")
 public class TaskController {
 
     @Autowired

@@ -25,6 +25,29 @@ public class User implements UserDetails {
     @Column(name = "name", nullable = false)
     private String name;
     
+    @Size(max = 100)
+    @Column(name = "first_name")
+    private String firstName;
+    
+    @Size(max = 100)
+    @Column(name = "last_name")
+    private String lastName;
+    
+    @Size(max = 50)
+    @Column(name = "phone")
+    private String phone;
+    
+    @Size(max = 10)
+    @Column(name = "language")
+    private String language;
+    
+    @Size(max = 10)
+    @Column(name = "region")
+    private String region;
+    
+    @Column(name = "avatar_data", columnDefinition = "TEXT")
+    private String avatarData;
+    
     @NotBlank
     @Email
     @Size(max = 100)
@@ -112,6 +135,54 @@ public class User implements UserDetails {
         this.role = role;
     }
     
+    public String getFirstName() {
+        return firstName;
+    }
+    
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+    
+    public String getLastName() {
+        return lastName;
+    }
+    
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+    
+    public String getPhone() {
+        return phone;
+    }
+    
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+    
+    public String getLanguage() {
+        return language;
+    }
+    
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+    
+    public String getRegion() {
+        return region;
+    }
+    
+    public void setRegion(String region) {
+        this.region = region;
+    }
+    
+    public String getAvatarData() {
+        return avatarData;
+    }
+    
+    public void setAvatarData(String avatarData) {
+        this.avatarData = avatarData;
+    }
+    
     public Boolean getEnabled() {
         return enabled;
     }
@@ -168,6 +239,6 @@ public class User implements UserDetails {
     }
     
     public enum Role {
-        USER, ADMIN
+        USER, ADMIN, HR, HR_REP, FINANCE, SALES, MANAGER
     }
 }

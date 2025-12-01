@@ -1,4 +1,6 @@
 com/edusync/auth/entity/User.class
+com/edusync/auth/dto/UserProfileDTO.class
+com/edusync/auth/dto/UpdateProfileRequest.class
 com/edusync/auth/dto/AuthResponse.class
 com/edusync/auth/dto/RegisterRequest.class
 com/edusync/auth/dto/LoginRequest.class
@@ -12,3 +14,4 @@ com/edusync/auth/controller/AuthController.class
 com/edusync/auth/AuthApplication.class
 com/edusync/auth/dto/UserDTO.class
 com/edusync/auth/service/AuthService.class
+com/edusync/auth/dto/UpdatePasswordRequest.class

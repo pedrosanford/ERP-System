@@ -36,6 +36,12 @@ spring:
             - Path=/api/student/**
           filters:
             - StripPrefix=1
+        - id: sales-service
+          uri: lb://EDUSYNC-SALES
+          predicates:
+            - Path=/api/sales/**
+          filters:
+            - StripPrefix=1
 
 eureka:
   client:

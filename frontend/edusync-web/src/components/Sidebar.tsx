@@ -292,11 +292,17 @@ const Sidebar: React.FC<SidebarProps> = ({isOpen, onToggle, activeSection, onSec
                     <div className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 transition-colors">
                         {/* Profile Avatar/Icon */}
                         <div
-                            className="w-8 h-8 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center cursor-pointer"
+                            className="w-8 h-8 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full flex items-center justify-center cursor-pointer overflow-hidden"
                             onClick={() => onSectionChange('profile-settings')}
                             title="Click to open Profile Settings"
                         >
-                            {user ? (
+                            {user?.avatarData ? (
+                                <img 
+                                    src={user.avatarData} 
+                                    alt="User avatar" 
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : user ? (
                                 <span className="text-white font-medium text-xs">
                                     {user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
                                 </span>

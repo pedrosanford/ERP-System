@@ -70,10 +70,10 @@ npm run dev
         │  │ Finance │ │    HR   │ │ Student │     │
         │  │ :8081   │ │ :8082   │ │ :8083   │     │
         │  └─────────┘ └─────────┘ └─────────┘     │
-        │  ┌─────────┐ ┌─────────┐ ┌─────────┐     │
-        │  │  Sales │ │Academics│ │  Auth   │     │
-        │  │ :8084   │ │ :8085   │ │ :8086   │     │
-        │  └─────────┘ └─────────┘ └─────────┘     │
+        │  ┌─────────┐ ┌─────────┐                 │
+        │  │  Sales │ │  Auth   │                 │
+        │  │ :8084   │ │ :8086   │                 │
+        │  └─────────┘ └─────────┘                 │
         └─────────────────────────────────────────────┘
 ```
 
@@ -88,8 +88,7 @@ ERP-System/
 │   ├── edusync-finance/              # Financial Management
 │   ├── edusync-hr/                   # Human Resources
 │   ├── edusync-student/              # Student Management
-│   ├── edusync-sales/                # Sales & CRM
-│   └── edusync-academics/            # Academic Management
+│   └── edusync-sales/                # Sales & CRM
 ├── frontend/
 │   └── edusync-web/                  # React Frontend (TypeScript)
 ├── docker-compose.yml               # Docker orchestration
@@ -127,12 +126,6 @@ ERP-System/
 - **Opportunity Management**: Sales deals and conversion tracking
 - **Communication Tools**: Email templates and follow-up automation
 - **Performance Analytics**: Sales metrics and conversion rates
-
-#### 📚 Academics Service (Port 8085)
-- **Program Management**: Degree programs and curriculum design
-- **Course Scheduling**: Class timetables and room assignments
-- **Grade Management**: Assignment tracking and transcript generation
-- **Academic Calendar**: Term management and exam scheduling
 
 #### 🔐 Auth Service (Port 8086)
 - **User Authentication**: JWT-based authentication
@@ -239,7 +232,6 @@ All services use Docker environment variables for configuration:
 - **HR**: 8082
 - **Student**: 8083
 - **Sales**: 8084
-- **Academics**: 8085
 - **Auth**: 8086
 - **PostgreSQL**: 5432
 

@@ -1,6 +1,7 @@
-import React, { useState, useRef, type FormEvent } from 'react';
+import React, { useState, useRef, type FormEvent, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { FiUser, FiLock, FiGlobe, FiCamera, FiSave, FiX } from 'react-icons/fi';
+import authService, { type UserProfile } from '../../services/authService';
 
 interface ProfileFormData {
   firstName: string;
@@ -29,7 +30,7 @@ interface ProfileErrors {
 }
 
 const ProfileSettings: React.FC = () => {
-  const { user } = useAuth();
+  const { user, setUserData } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<ProfileFormData>({
@@ -51,6 +52,46 @@ const ProfileSettings: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'basic' | 'security' | 'preferences'>('basic');
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
+  const [avatarRemoved, setAvatarRemoved] = useState<boolean>(false);
+  const [hasServerAvatar, setHasServerAvatar] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+    const loadProfile = async () => {
+      try {
+        setIsInitializing(true);
+        const profile = await authService.getProfile();
+        setFormData((prev) => ({
+          ...prev,
+          firstName: profile.firstName || '',
+          lastName: profile.lastName || '',
+          displayName: profile.displayName || '',
+          email: profile.email || '',
+          phone: profile.phone || '',
+          language: profile.language || prev.language,
+          region: profile.region || prev.region,
+          avatar: null
+        }));
+        setPreviewUrl(profile.avatarData || null);
+        setHasServerAvatar(!!profile.avatarData);
+        setAvatarRemoved(false);
+        setErrors({});
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+        setErrors((prev) => ({
+          ...prev,
+          email: 'Unable to load profile information. Please try again later.'
+        }));
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    loadProfile();
+  }, [user?.id]);
 
   const handleInputChange = (field: keyof ProfileFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -75,6 +116,7 @@ const ProfileSettings: React.FC = () => {
 
       setFormData(prev => ({ ...prev, avatar: file }));
       setErrors(prev => ({ ...prev, avatar: undefined }));
+      setAvatarRemoved(false);
 
       // Create preview
       const reader = new FileReader();
@@ -89,6 +131,7 @@ const ProfileSettings: React.FC = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    setAvatarRemoved(hasServerAvatar);
   };
 
   const validateForm = (): boolean => {
@@ -141,31 +184,83 @@ const ProfileSettings: React.FC = () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    let passwordErrorOccurred = false;
     
     try {
-      // TODO: Implement API calls to update profile
-      // This would typically include separate endpoints for:
-      // 1. Basic info update
-      // 2. Avatar upload
-      // 3. Password change
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setSuccessMessage('Profile updated successfully!');
-      
-      // Clear password fields after successful update
+      const profilePayload = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        displayName: formData.displayName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone ? formData.phone.trim() : undefined,
+        language: formData.language,
+        region: formData.region
+      };
+
+      let updatedProfile: UserProfile | null = await authService.updateProfile(profilePayload);
+
+      if (formData.avatar) {
+        updatedProfile = await authService.uploadAvatar(formData.avatar);
+        setFormData(prev => ({ ...prev, avatar: null }));
+        setAvatarRemoved(false);
+        setHasServerAvatar(true);
+      } else if (avatarRemoved && hasServerAvatar) {
+        updatedProfile = await authService.removeAvatar();
+        setAvatarRemoved(false);
+        setHasServerAvatar(false);
+      }
+
       if (formData.newPassword) {
+        try {
+          await authService.updatePassword({
+            currentPassword: formData.currentPassword,
+            newPassword: formData.newPassword
+          });
+          setFormData(prev => ({
+            ...prev,
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          }));
+        } catch (passwordError) {
+          passwordErrorOccurred = true;
+          throw passwordError;
+        }
+      }
+
+      if (updatedProfile) {
         setFormData(prev => ({
           ...prev,
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
+          firstName: updatedProfile.firstName || prev.firstName,
+          lastName: updatedProfile.lastName || prev.lastName,
+          displayName: updatedProfile.displayName || prev.displayName,
+          email: updatedProfile.email || prev.email,
+          phone: updatedProfile.phone || '',
+          language: updatedProfile.language || prev.language,
+          region: updatedProfile.region || prev.region
         }));
+        setPreviewUrl(updatedProfile.avatarData || null);
+        if (user) {
+          setUserData({
+            ...user,
+            name: updatedProfile.displayName || user.name,
+            email: updatedProfile.email || user.email,
+            avatarData: updatedProfile.avatarData ?? null,
+            language: updatedProfile.language ?? undefined,
+            region: updatedProfile.region ?? undefined
+          });
+        }
       }
-      
+
+      setErrors({});
+      setSuccessMessage('Profile updated successfully!');
     } catch (error) {
-      setErrors({ email: 'Failed to update profile. Please try again.' });
+      const message = error instanceof Error ? error.message : 'Failed to update profile. Please try again.';
+      if (passwordErrorOccurred) {
+        setErrors(prev => ({ ...prev, currentPassword: message }));
+      } else {
+        setErrors({ email: message });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -524,7 +619,7 @@ const ProfileSettings: React.FC = () => {
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isInitializing}
             className="flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
           >
             <FiSave className="w-4 h-4 mr-2" />

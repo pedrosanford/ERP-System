@@ -22,6 +22,15 @@ eureka:
     service-url:
       defaultZone: http://localhost:8761/eureka/
 
+# Service URLs for inter-service communication
+student:
+  service:
+    url: http://localhost:8083
+
+finance:
+  service:
+    url: http://localhost:8081
+
 ---
 spring:
   config:
@@ -35,3 +44,12 @@ eureka:
   client:
     service-url:
       defaultZone: http://eureka:8761/eureka/
+
+# Service URLs for inter-service communication (Docker)
+student:
+  service:
+    url: http://edusync-student:8083
+
+finance:
+  service:
+    url: http://edusync-finance:8081

@@ -586,8 +586,10 @@ const Sales: React.FC = () => {
   // Top lead source
   const topLeadSource = sourcesArray.length > 0 ? sourcesArray[0] : { source: 'None', count: 0, percentage: 0 };
 
-  // Follow-ups due today - get leads with next_follow_up_date = today
+  // Follow-ups due today - available for future dashboard widgets
   const today = new Date().toISOString().split('T')[0];
+  void today; // used in commented code below
+  /* Future: Follow-ups tracking
   const followUpsToday = leadsData.filter((lead: any) => {
     if (!lead.nextFollowUpDate) return false;
     const followUpDate = new Date(lead.nextFollowUpDate).toISOString().split('T')[0];
@@ -600,6 +602,7 @@ const Sales: React.FC = () => {
     const todayDate = new Date(today);
     return followUpDate < todayDate;
   });
+  */
 
   // Dashboard data with detailed information (using real stats from API)
   const dashboardItems = [
@@ -674,9 +677,9 @@ const Sales: React.FC = () => {
           };
         }).filter(s => s.count > 0),
         projectedRevenue: {
-          conservative: Math.round(stats?.potentialRevenue * 0.75 || 0),
-          realistic: Math.round(stats?.potentialRevenue || 0),
-          optimistic: Math.round(stats?.potentialRevenue * 1.2 || 0)
+          conservative: Math.round((stats?.potentialRevenue ?? 0) * 0.75),
+          realistic: Math.round(stats?.potentialRevenue ?? 0),
+          optimistic: Math.round((stats?.potentialRevenue ?? 0) * 1.2)
         }
       }
     }

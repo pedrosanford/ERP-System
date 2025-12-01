@@ -156,7 +156,7 @@ const EvaluationTemplateManager: React.FC<EvaluationTemplateManagerProps> = ({ t
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleTypeColor(template.roleType)}`}>
-                                    {template.roleType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                    {template.roleType.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                                 </span>
                                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                                     template.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'

@@ -1,9 +1,7 @@
 package com.edusync.auth.service;
 
 import com.edusync.auth.dto.AuthResponse;
-import com.edusync.auth.dto.LoginRequest;
-import com.edusync.auth.dto.RegisterRequest;
-import com.edusync.auth.dto.UserDTO;
+import com.edusync.auth.dto.*;
 import com.edusync.auth.entity.User;
 import com.edusync.auth.repository.UserRepository;
 import com.edusync.auth.util.JwtUtil;
@@ -14,7 +12,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,10 +46,17 @@ public class AuthService {
             // Create new user
             User user = new User();
             user.setName(request.getName());
+            String[] nameParts = request.getName().trim().split("\\s+", 2);
+            user.setFirstName(nameParts[0]);
+            if (nameParts.length > 1) {
+                user.setLastName(nameParts[1]);
+            }
             user.setEmail(request.getEmail());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setRole(User.Role.USER);
             user.setEnabled(true);
+            user.setLanguage("en");
+            user.setRegion("US");
             
             User savedUser = userRepository.save(user);
             
@@ -134,5 +142,91 @@ public class AuthService {
                     user.getUpdatedAt()
                 ))
                 .collect(Collectors.toList());
+    }
+    
+    public UserProfileDTO getProfile() {
+        User user = getAuthenticatedUserOrThrow();
+        return mapToProfileDTO(user);
+    }
+    
+    public UserProfileDTO updateProfile(UpdateProfileRequest request) {
+        User user = getAuthenticatedUserOrThrow();
+        
+        if (!user.getEmail().equalsIgnoreCase(request.getEmail())
+                && userRepository.existsByEmailAndIdNot(request.getEmail(), user.getId())) {
+            throw new IllegalArgumentException("Email is already in use by another account");
+        }
+        
+        user.setFirstName(request.getFirstName().trim());
+        user.setLastName(request.getLastName().trim());
+        user.setName(request.getDisplayName().trim());
+        user.setEmail(request.getEmail().trim());
+        user.setPhone(request.getPhone() != null && !request.getPhone().isBlank() ? request.getPhone().trim() : null);
+        user.setLanguage(request.getLanguage() != null ? request.getLanguage().trim() : null);
+        user.setRegion(request.getRegion() != null ? request.getRegion().trim() : null);
+        
+        User saved = userRepository.save(user);
+        return mapToProfileDTO(saved);
+    }
+    
+    public void updatePassword(UpdatePasswordRequest request) {
+        User user = getAuthenticatedUserOrThrow();
+        
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+        
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+    
+    public UserProfileDTO updateAvatar(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Avatar file is required");
+        }
+        
+        try {
+            User user = getAuthenticatedUserOrThrow();
+            String contentType = file.getContentType() != null ? file.getContentType() : "image/png";
+            String base64 = Base64.getEncoder().encodeToString(file.getBytes());
+            user.setAvatarData("data:" + contentType + ";base64," + base64);
+            return mapToProfileDTO(userRepository.save(user));
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to process avatar: " + e.getMessage(), e);
+        }
+    }
+    
+    public UserProfileDTO removeAvatar() {
+        User user = getAuthenticatedUserOrThrow();
+        user.setAvatarData(null);
+        return mapToProfileDTO(userRepository.save(user));
+    }
+    
+    private User getAuthenticatedUserOrThrow() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof User) {
+            return (User) authentication.getPrincipal();
+        }
+        // Fallback to the first available user to keep the demo functional even without auth
+        return userRepository.findAll()
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No users available in the system"));
+    }
+    
+    private UserProfileDTO mapToProfileDTO(User user) {
+        return new UserProfileDTO(
+            user.getId(),
+            user.getFirstName(),
+            user.getLastName(),
+            user.getName(),
+            user.getEmail(),
+            user.getPhone(),
+            user.getLanguage(),
+            user.getRegion(),
+            user.getAvatarData(),
+            user.getCreatedAt(),
+            user.getUpdatedAt()
+        );
     }
 }

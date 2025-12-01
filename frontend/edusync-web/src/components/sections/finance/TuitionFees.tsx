@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FiDollarSign, FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiDollarSign, FiPlus } from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa';
 import studentService, { type Student as StudentAPI } from '../../../services/studentService';
-import financeService from '../../../services/financeService';
-
-interface TuitionRule {
-  id: string;
-  grade: string;
-  course: string;
-  amount: number;
-  frequency: 'Monthly' | 'Quarterly' | 'Annually';
-  status: 'Active' | 'Inactive';
-}
 
 interface Invoice {
   id: string;
@@ -33,10 +23,8 @@ interface Payment {
 }
 
 const TuitionFees: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'rules' | 'invoices' | 'collections'>('rules');
-  const [showRuleModal, setShowRuleModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'invoices' | 'collections'>('invoices');
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [editingRule, setEditingRule] = useState<TuitionRule | null>(null);
   
   // Real students from database
   const [students, setStudents] = useState<StudentAPI[]>([]);
@@ -49,14 +37,6 @@ const TuitionFees: React.FC = () => {
   const [invoicesError, setInvoicesError] = useState<string | null>(null);
 
   // Form states
-  const [ruleForm, setRuleForm] = useState({
-    grade: '',
-    course: '',
-    amount: '',
-    frequency: 'Monthly' as 'Monthly' | 'Quarterly' | 'Annually',
-    status: 'Active' as 'Active' | 'Inactive'
-  });
-
   const [invoiceForm, setInvoiceForm] = useState({
     studentId: '',
     studentName: '',
@@ -96,27 +76,27 @@ const TuitionFees: React.FC = () => {
     setIsLoadingInvoices(true);
     setInvoicesError(null);
     try {
-      // Fetch tuition and fees invoices from finance service
-      const [tuitionInvoices, feesInvoices] = await Promise.all([
-        financeService.getTransactionsByCategory('Tuition Invoice'),
-        financeService.getTransactionsByCategory('Fees Invoice')
-      ]);
-      
-      // Combine and transform to Invoice format
-      const allInvoices = [...tuitionInvoices, ...feesInvoices].map(transaction => {
-        const student = students.find(s => s.id === transaction.studentId);
-        return {
-          id: transaction.transactionId,
-          studentName: student ? `${student.firstName} ${student.lastName}` : 'Unknown Student',
-          grade: student?.program || 'Unknown Program',
-          amount: transaction.amount,
-          dueDate: transaction.date,
-          status: transaction.status === 'COMPLETED' ? 'Paid' as 'Paid' : 
-                  transaction.status === 'PENDING' ? 'Pending' as 'Pending' : 'Overdue' as 'Overdue'
-        };
-      });
-      
-      setInvoices(allInvoices);
+      // Fetch tuition fees from finance service
+      const response = await fetch('/api/finance/tuition-fees');
+      if (response.ok) {
+        const tuitionFeesData = await response.json();
+        
+        // Transform to Invoice format
+        const allInvoices = tuitionFeesData.map((tf: any) => {
+          const student = students.find(s => s.studentId === tf.studentId);
+          return {
+            id: tf.id.toString(),
+            studentName: student ? `${student.firstName} ${student.lastName}` : tf.studentId,
+            grade: tf.program || student?.program || 'Unknown Program',
+            amount: tf.netAmount || tf.totalAmount,
+            dueDate: tf.createdAt?.substring(0, 10) || '2024-10-20',
+            status: tf.status === 'COMPLETED' ? 'Paid' as const : 
+                    tf.status === 'ACTIVE' ? 'Pending' as const : 'Overdue' as const
+          };
+        });
+        
+        setInvoices(allInvoices);
+      }
     } catch (err: any) {
       console.error('Failed to fetch invoices:', err);
       setInvoicesError(err.message || 'Failed to load invoices');
@@ -125,71 +105,26 @@ const TuitionFees: React.FC = () => {
     }
   };
 
-  // Real data (no mock data)
-  const [tuitionRules, setTuitionRules] = useState<TuitionRule[]>([
-    { id: '1', grade: 'Grade 1', course: 'General', amount: 5000, frequency: 'Monthly', status: 'Active' },
-    { id: '2', grade: 'Grade 2', course: 'General', amount: 5500, frequency: 'Monthly', status: 'Active' },
-  ]);
-
-  const payments: Payment[] = []; // Empty payments for now
+  // Calculate payments from completed tuition fees
+  const [payments, setPayments] = React.useState<Payment[]>([]);
+  
+  React.useEffect(() => {
+    if (invoices.length > 0) {
+      const paidInvoices = invoices.filter(inv => inv.status === 'Paid');
+      const paymentData = paidInvoices.map(inv => ({
+        id: `PAY-${inv.id}`,
+        invoiceId: inv.id,
+        studentName: inv.studentName,
+        amount: inv.amount,
+        paymentDate: inv.dueDate,
+        method: 'Bank Transfer' as const,
+        status: 'Received' as const
+      }));
+      setPayments(paymentData);
+    }
+  }, [invoices]);
 
   // Handler functions
-  const handleAddRule = () => {
-    setEditingRule(null);
-    setRuleForm({
-      grade: '',
-      course: '',
-      amount: '',
-      frequency: 'Monthly',
-      status: 'Active'
-    });
-    setShowRuleModal(true);
-  };
-
-  const handleEditRule = (rule: TuitionRule) => {
-    setEditingRule(rule);
-    setRuleForm({
-      grade: rule.grade,
-      course: rule.course,
-      amount: rule.amount.toString(),
-      frequency: rule.frequency,
-      status: rule.status
-    });
-    setShowRuleModal(true);
-  };
-
-  const handleDeleteRule = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this tuition rule?')) {
-      setTuitionRules(tuitionRules.filter(rule => rule.id !== id));
-    }
-  };
-
-  const handleSaveRule = () => {
-    if (!ruleForm.grade || !ruleForm.course || !ruleForm.amount) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    if (editingRule) {
-      setTuitionRules(tuitionRules.map(rule =>
-        rule.id === editingRule.id
-          ? { ...rule, ...ruleForm, amount: parseFloat(ruleForm.amount) }
-          : rule
-      ));
-    } else {
-      const newRule: TuitionRule = {
-        id: (tuitionRules.length + 1).toString(),
-        grade: ruleForm.grade,
-        course: ruleForm.course,
-        amount: parseFloat(ruleForm.amount),
-        frequency: ruleForm.frequency,
-        status: ruleForm.status
-      };
-      setTuitionRules([...tuitionRules, newRule]);
-    }
-    setShowRuleModal(false);
-  };
-
   const handleAddInvoice = () => {
     if (students.length === 0) {
       alert('No active students found. Please add students first.');
@@ -237,70 +172,6 @@ const TuitionFees: React.FC = () => {
     // Show success message
     alert(`Invoice created successfully for ${invoiceForm.studentName}!`);
   };
-
-  const renderTuitionRules = () => (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Tuition Fee Structure</h3>
-        <button
-          onClick={handleAddRule}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          <FiPlus className="w-4 h-4" />
-          Add Rule
-        </button>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade/Course</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frequency</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {tuitionRules.map((rule) => (
-              <tr key={rule.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{rule.grade}</div>
-                    <div className="text-sm text-gray-500">{rule.course}</div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${rule.amount.toLocaleString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{rule.frequency}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    rule.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {rule.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => handleEditRule(rule)}
-                    className="text-primary-600 hover:text-primary-900 mr-3"
-                  >
-                    <FiEdit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteRule(rule.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <FiTrash2 className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 
   const renderInvoices = () => (
     <div className="space-y-4">
@@ -444,23 +315,13 @@ const TuitionFees: React.FC = () => {
         </div>
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Tuition & Fees</h2>
-          <p className="text-sm text-gray-600">Manage tuition rules, generate invoices, and track collections</p>
+          <p className="text-sm text-gray-600">Generate invoices and track collections</p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex gap-6">
-          <button
-            onClick={() => setActiveTab('rules')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'rules'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Set Tuition Rules
-          </button>
           <button
             onClick={() => setActiveTab('invoices')}
             className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -486,90 +347,9 @@ const TuitionFees: React.FC = () => {
 
       {/* Content */}
       <div className="mt-6">
-        {activeTab === 'rules' && renderTuitionRules()}
         {activeTab === 'invoices' && renderInvoices()}
         {activeTab === 'collections' && renderCollections()}
       </div>
-
-      {/* Add/Edit Rule Modal */}
-      {showRuleModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              {editingRule ? 'Edit Tuition Rule' : 'Add Tuition Rule'}
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
-                <input
-                  type="text"
-                  value={ruleForm.grade}
-                  onChange={(e) => setRuleForm({ ...ruleForm, grade: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="e.g., Grade 1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-                <input
-                  type="text"
-                  value={ruleForm.course}
-                  onChange={(e) => setRuleForm({ ...ruleForm, course: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="e.g., General"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
-                <input
-                  type="number"
-                  value={ruleForm.amount}
-                  onChange={(e) => setRuleForm({ ...ruleForm, amount: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="5000"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
-                <select
-                  value={ruleForm.frequency}
-                  onChange={(e) => setRuleForm({ ...ruleForm, frequency: e.target.value as 'Monthly' | 'Quarterly' | 'Annually' })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="Monthly">Monthly</option>
-                  <option value="Quarterly">Quarterly</option>
-                  <option value="Annually">Annually</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={ruleForm.status}
-                  onChange={(e) => setRuleForm({ ...ruleForm, status: e.target.value as 'Active' | 'Inactive' })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowRuleModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveRule}
-                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                {editingRule ? 'Save Changes' : 'Add Rule'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Generate Invoice Modal */}
       {showInvoiceModal && (

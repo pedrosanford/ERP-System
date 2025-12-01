@@ -316,113 +316,6 @@
 
 ---
 
-## 📚 ACADEMICS MODULE (edusync-academics)
-
-### Таблица: `programs`
-**Статус**: ❌ Требуется реализация
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| id | BIGSERIAL PRIMARY KEY | |
-| name | VARCHAR(200) NOT NULL | Название программы |
-| code | VARCHAR(20) UNIQUE | |
-| degree_type | VARCHAR(50) | BACHELOR, MASTER, PHD, DIPLOMA |
-| department_id | BIGINT | FK -> departments.id |
-| duration_years | INTEGER | |
-| credits_required | INTEGER | |
-| description | TEXT | |
-| is_active | BOOLEAN DEFAULT true | |
-| created_at | TIMESTAMP NOT NULL | |
-| updated_at | TIMESTAMP | |
-
-### Таблица: `courses`
-**Статус**: ❌ Требуется реализация
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| id | BIGSERIAL PRIMARY KEY | |
-| code | VARCHAR(20) UNIQUE NOT NULL | Код курса |
-| name | VARCHAR(200) NOT NULL | |
-| description | TEXT | |
-| credits | INTEGER NOT NULL | |
-| department_id | BIGINT | FK -> departments.id |
-| level | VARCHAR(20) | BEGINNER, INTERMEDIATE, ADVANCED |
-| prerequisites | TEXT | |
-| is_active | BOOLEAN DEFAULT true | |
-| created_at | TIMESTAMP NOT NULL | |
-| updated_at | TIMESTAMP | |
-
-### Таблица: `course_offerings`
-**Статус**: ❌ Требуется реализация
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| id | BIGSERIAL PRIMARY KEY | |
-| course_id | BIGINT NOT NULL | FK -> courses.id |
-| instructor_id | BIGINT | FK -> staff.id |
-| academic_year | VARCHAR(20) NOT NULL | |
-| semester | VARCHAR(20) NOT NULL | |
-| section | VARCHAR(10) | |
-| schedule | TEXT | JSON или текст с расписанием |
-| room | VARCHAR(50) | |
-| capacity | INTEGER | |
-| enrolled_count | INTEGER DEFAULT 0 | |
-| status | VARCHAR(20) | OPEN, CLOSED, CANCELLED |
-| created_at | TIMESTAMP NOT NULL | |
-| updated_at | TIMESTAMP | |
-
-### Таблица: `enrollments`
-**Статус**: ❌ Требуется реализация
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| id | BIGSERIAL PRIMARY KEY | |
-| student_id | BIGINT NOT NULL | FK -> students.id |
-| course_offering_id | BIGINT NOT NULL | FK -> course_offerings.id |
-| enrollment_date | DATE NOT NULL | |
-| status | VARCHAR(20) | ENROLLED, COMPLETED, DROPPED, FAILED |
-| grade | VARCHAR(5) | A+, A, B+, B, C+, C, D, F |
-| grade_points | DECIMAL(3,2) | |
-| attendance_percentage | DECIMAL(5,2) | |
-| created_at | TIMESTAMP NOT NULL | |
-| updated_at | TIMESTAMP | |
-
-### Таблица: `assignments`
-**Статус**: ❌ Требуется реализация
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| id | BIGSERIAL PRIMARY KEY | |
-| course_offering_id | BIGINT NOT NULL | FK -> course_offerings.id |
-| title | VARCHAR(255) NOT NULL | |
-| description | TEXT | |
-| max_points | DECIMAL(5,2) | |
-| due_date | TIMESTAMP | |
-| created_by | BIGINT | FK -> users.id |
-| created_at | TIMESTAMP NOT NULL | |
-| updated_at | TIMESTAMP | |
-
-### Таблица: `submissions`
-**Статус**: ❌ Требуется реализация
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| id | BIGSERIAL PRIMARY KEY | |
-| assignment_id | BIGINT NOT NULL | FK -> assignments.id |
-| student_id | BIGINT NOT NULL | FK -> students.id |
-| submission_date | TIMESTAMP NOT NULL | |
-| file_path | VARCHAR(500) | |
-| content | TEXT | |
-| points_earned | DECIMAL(5,2) | |
-| feedback | TEXT | |
-| graded_by | BIGINT | FK -> users.id |
-| graded_at | TIMESTAMP | |
-| status | VARCHAR(20) | SUBMITTED, GRADED, LATE |
-| created_at | TIMESTAMP NOT NULL | |
-| updated_at | TIMESTAMP | |
-
----
-
 ## 💼 SALES MODULE (edusync-sales)
 
 ### Таблица: `leads`
@@ -504,10 +397,6 @@
 - `staff.department_id` -> `departments.id` (HR)
 - `tuition_fees.student_id` -> `students.id` (Student)
 - `payments.student_id` -> `students.id` (Student)
-- `enrollments.student_id` -> `students.id` (Student)
-- `enrollments.course_offering_id` -> `course_offerings.id` (Academics)
-- `course_offerings.instructor_id` -> `staff.id` (HR)
-- `leads.program_interest_id` -> `programs.id` (Academics)
 - `expenses.department_id` -> `departments.id` (HR)
 
 ---
@@ -519,34 +408,29 @@
 2. `departments` (HR)
 3. `staff` (HR)
 4. `students` (Student)
-5. `programs` (Academics)
 
-### Фаза 2: Academic & Finance (Приоритет MEDIUM)
-6. `courses` (Academics)
-7. `course_offerings` (Academics)
-8. `enrollments` (Academics)
-9. `tuition_fees` (Finance)
-10. `payments` (Finance)
+### Фаза 2: Finance Core (Приоритет MEDIUM)
+5. `tuition_fees` (Finance)
+6. `payments` (Finance)
 
 ### Фаза 3: HR & Payroll (Приоритет MEDIUM)
-11. `attendance` (HR)
-12. `leave_requests` (HR)
-13. `payroll` (HR)
-14. `staff_evaluations` (HR)
-15. `scholarships` (Finance)
+7. `attendance` (HR)
+8. `leave_requests` (HR)
+9. `payroll` (HR)
+10. `staff_evaluations` (HR)
+11. `scholarships` (Finance)
 
-### Фаза 4: Sales & Advanced Features (Приоритет LOW)
-16. `leads` (Sales)
-17. `opportunities` (Sales)
-18. `sales_activities` (Sales)
-19. `email_templates` (Sales)
-20. `assignments` & `submissions` (Academics)
+### Фаза 4: Sales & CRM (Приоритет LOW)
+12. `leads` (Sales)
+13. `opportunities` (Sales)
+14. `sales_activities` (Sales)
+15. `email_templates` (Sales)
 
 ### Фаза 5: Supporting Tables (Приоритет LOW)
-21. `student_documents` (Student)
-22. `staff_documents` (HR)
-23. `budgets` (Finance)
-24. `expenses` (Finance)
+16. `student_documents` (Student)
+17. `staff_documents` (HR)
+18. `budgets` (Finance)
+19. `expenses` (Finance)
 
 ---
 

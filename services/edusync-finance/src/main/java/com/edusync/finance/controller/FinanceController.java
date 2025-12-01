@@ -5,10 +5,13 @@ import com.edusync.finance.entity.Transaction.TransactionStatus;
 import com.edusync.finance.entity.Transaction.TransactionType;
 import com.edusync.finance.entity.Scholarship;
 import com.edusync.finance.entity.TuitionFee;
+import com.edusync.finance.entity.Budget;
+import com.edusync.finance.entity.Budget.BudgetStatus;
 import com.edusync.finance.service.TransactionService;
 import com.edusync.finance.service.FinanceStatsService;
 import com.edusync.finance.service.ScholarshipService;
 import com.edusync.finance.service.TuitionFeeService;
+import com.edusync.finance.service.BudgetService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -29,17 +32,20 @@ public class FinanceController {
     private final FinanceStatsService financeStatsService;
     private final ScholarshipService scholarshipService;
     private final TuitionFeeService tuitionFeeService;
+    private final BudgetService budgetService;
 
     @Autowired
     public FinanceController(
             TransactionService transactionService,
             FinanceStatsService financeStatsService,
             ScholarshipService scholarshipService,
-            TuitionFeeService tuitionFeeService) {
+            TuitionFeeService tuitionFeeService,
+            BudgetService budgetService) {
         this.transactionService = transactionService;
         this.financeStatsService = financeStatsService;
         this.scholarshipService = scholarshipService;
         this.tuitionFeeService = tuitionFeeService;
+        this.budgetService = budgetService;
     }
     
     // Health check
@@ -226,6 +232,58 @@ public class FinanceController {
     public ResponseEntity<Void> deleteTuitionFee(@PathVariable Long id) {
         try {
             tuitionFeeService.deleteTuitionFee(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // ============ BUDGET ENDPOINTS ============
+
+    @GetMapping("/budgets")
+    public ResponseEntity<List<Budget>> getAllBudgets() {
+        return ResponseEntity.ok(budgetService.getAllBudgets());
+    }
+
+    @GetMapping("/budgets/{id}")
+    public ResponseEntity<Budget> getBudgetById(@PathVariable Long id) {
+        return budgetService.getBudgetById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/budgets/status/{status}")
+    public ResponseEntity<List<Budget>> getBudgetsByStatus(@PathVariable BudgetStatus status) {
+        return ResponseEntity.ok(budgetService.getBudgetsByStatus(status));
+    }
+
+    @GetMapping("/budgets/category/{category}")
+    public ResponseEntity<List<Budget>> getBudgetsByCategory(@PathVariable String category) {
+        return ResponseEntity.ok(budgetService.getBudgetsByCategory(category));
+    }
+
+    @PostMapping("/budgets")
+    public ResponseEntity<Budget> createBudget(@Valid @RequestBody Budget budget) {
+        Budget created = budgetService.createBudget(budget);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/budgets/{id}")
+    public ResponseEntity<Budget> updateBudget(
+            @PathVariable Long id,
+            @Valid @RequestBody Budget budget) {
+        try {
+            Budget updated = budgetService.updateBudget(id, budget);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/budgets/{id}")
+    public ResponseEntity<Void> deleteBudget(@PathVariable Long id) {
+        try {
+            budgetService.deleteBudget(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();

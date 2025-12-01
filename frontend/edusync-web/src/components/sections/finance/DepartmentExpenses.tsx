@@ -58,6 +58,8 @@ const DepartmentExpenses: React.FC = () => {
   useEffect(() => {
     fetchDepartments();
     fetchExpenses();
+    fetchBudgets();
+    fetchReimbursements();
   }, []);
   
   const fetchDepartments = async () => {
@@ -102,9 +104,48 @@ const DepartmentExpenses: React.FC = () => {
       setIsLoadingExpenses(false);
     }
   };
-  
-  
-  
+
+  const fetchBudgets = async () => {
+    try {
+      const response = await fetch('/api/finance/budgets');
+      if (response.ok) {
+        const budgetsData = await response.json();
+        // Transform API budgets to component format
+        const transformedBudgets = budgetsData.map((b: any) => ({
+          id: b.id.toString(),
+          department: b.name.replace(' Department', '').replace(/Q\d \d{4}/, '').replace(/\d{4}/, '').trim(),
+          allocatedBudget: b.amount,
+          usedBudget: b.spent,
+          remainingBudget: b.remaining || (b.amount - b.spent),
+          expenses: 0
+        }));
+        setBudgets(transformedBudgets);
+      }
+    } catch (error) {
+      console.error('Failed to load budgets:', error);
+    }
+  };
+
+  const fetchReimbursements = async () => {
+    try {
+      const txs = await financeService.getAllTransactions();
+      const reimbData = txs
+        .filter(t => t.category === 'Reimbursements')
+        .map((tx) => ({
+          id: tx.id?.toString() || tx.transactionId,
+          employeeName: tx.description.split(' - ')[0] || 'Unknown',
+          employeeId: tx.staffId?.toString() || 'N/A',
+          amount: tx.amount,
+          category: tx.subCategory || 'General',
+          date: tx.date,
+          status: tx.status === 'COMPLETED' ? ('Approved' as const) : ('Pending' as const),
+          description: tx.description
+        }));
+      setReimbursements(reimbData);
+    } catch (error) {
+      console.error('Failed to load reimbursements:', error);
+    }
+  };
 
   const [expenseForm, setExpenseForm] = useState({
     vendor: '',
@@ -124,8 +165,8 @@ const DepartmentExpenses: React.FC = () => {
     description: ''
   });
 
-  // Real data (no mock data)
-  const [budgets] = useState<DepartmentBudget[]>([]);
+  // Real budgets and reimbursements from API
+  const [budgets, setBudgets] = useState<DepartmentBudget[]>([]);
   const [reimbursements, setReimbursements] = useState<Reimbursement[]>([]);
 
   const handleAddExpense = () => {

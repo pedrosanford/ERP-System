@@ -436,19 +436,38 @@ const Sales: React.FC = () => {
         // Get the lead being moved
         const lead = leadsData.find(l => l.id === draggedLead);
         
-        // Update lead status
+        if (!lead) return;
+
+        // Update lead status on backend
         await salesService.updateLeadStatus(draggedLead, stageId);
+
+        // Update local state immediately (optimistic update)
+        const updatedLeads = leadsData.map(l => 
+          l.id === draggedLead ? { ...l, status: stageId } : l
+        );
+        setLeadsData(updatedLeads);
+
+        // Update stage counts based on updated leads
+        setKanbanStages(prevStages => 
+          prevStages.map(stage => ({
+            ...stage,
+            count: updatedLeads.filter(l => l.status === stage.id).length
+          }))
+        );
 
         // If moving to "enrolled" stage, automatically create a student
         if (stageId.toLowerCase() === 'enrolled' && lead) {
-          await handleEnrollment(lead);
+          // Pass the lead with updated status
+          await handleEnrollment({ ...lead, status: stageId });
         }
 
-        // Reload all data to reflect changes
-        await loadAllData();
+        // Refresh stats in background without reloading everything
+        salesService.getStats().then(setStats).catch(console.error);
       } catch (err: any) {
         console.error('Failed to update lead status:', err);
         alert('Failed to update lead: ' + (err.message || 'Unknown error'));
+        // Reload data on error to sync with backend
+        await loadAllData();
       }
     }
     setDraggedLead(null);
@@ -503,12 +522,22 @@ const Sales: React.FC = () => {
       const createdStudent = await studentService.createStudent(studentData);
       console.log('Student created successfully:', createdStudent);
 
-      // Update the lead with the student ID
+      // Update the lead with the student ID AND status
       if (createdStudent.id && lead.id) {
         await salesService.updateLead(lead.id, {
           ...lead,
+          status: 'enrolled', // Explicitly set status to "enrolled"
           studentId: createdStudent.studentId
         });
+        
+        // Update local state to reflect the changes
+        setLeadsData(prevLeads => 
+          prevLeads.map(l => 
+            l.id === lead.id 
+              ? { ...l, status: 'enrolled', studentId: createdStudent.studentId } 
+              : l
+          )
+        );
       }
 
       // Show success message

@@ -19,10 +19,18 @@ interface LayoutProps {}
 const Layout: React.FC<LayoutProps> = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [activeSection, setActiveSection] = useState('dashboard');
+  // Load active section from localStorage or default to 'dashboard'
+  const [activeSection, setActiveSection] = useState(() => {
+    return localStorage.getItem('activeSection') || 'dashboard';
+  });
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Save activeSection to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('activeSection', activeSection);
+  }, [activeSection]);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -35,6 +43,7 @@ const Layout: React.FC<LayoutProps> = () => {
 
   const handleLogout = () => {
     logout();
+    localStorage.removeItem('activeSection'); // Clear on logout
     navigate('/auth');
   };
 

@@ -207,10 +207,17 @@ public class AuthService {
         if (authentication != null && authentication.getPrincipal() instanceof User) {
             return (User) authentication.getPrincipal();
         }
-        // Fallback to the first available user to keep the demo functional even without auth
+        
+        // Fallback: try to get user from authentication name (email)
+        if (authentication != null && authentication.getName() != null && !authentication.getName().equals("anonymousUser")) {
+            return userRepository.findByEmail(authentication.getName())
+                    .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + authentication.getName()));
+        }
+        
+        // Last resort fallback for demo - return the last created user (most likely the one who just logged in)
         return userRepository.findAll()
                 .stream()
-                .findFirst()
+                .reduce((first, second) -> second) // Get last user
                 .orElseThrow(() -> new IllegalStateException("No users available in the system"));
     }
     

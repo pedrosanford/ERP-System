@@ -47,6 +47,9 @@ public class StaffEvaluation {
     @Column(name = "comments", columnDefinition = "TEXT")
     private String comments;
     
+    @Column(name = "rating")
+    private Integer rating; // 1-5 rating scale
+    
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     private EvaluationStatus status = EvaluationStatus.DRAFT;
@@ -164,6 +167,14 @@ public class StaffEvaluation {
     
     public void setComments(String comments) {
         this.comments = comments;
+    }
+    
+    public Integer getRating() {
+        return rating;
+    }
+    
+    public void setRating(Integer rating) {
+        this.rating = rating;
     }
     
     public EvaluationStatus getStatus() {

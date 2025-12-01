@@ -237,7 +237,6 @@ public class LeadService {
             logger.error("Stack trace:", e);
             // Don't throw exception - enrollment status should still be saved even if automation fails
             // This allows manual processing later. The error is logged for admin review.
-            // TODO: Consider adding a notification system to alert admins of failed enrollments
         }
     }
 

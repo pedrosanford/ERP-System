@@ -6,9 +6,12 @@ import com.edusync.hr.dto.mapper.DepartmentMapper;
 import com.edusync.hr.dto.mapper.StaffMapper;
 import com.edusync.hr.entity.Department;
 import com.edusync.hr.entity.Staff;
+import com.edusync.hr.entity.StaffEvaluation;
+import com.edusync.hr.entity.StaffEvaluation.EvaluationStatus;
 import com.edusync.hr.service.DepartmentService;
 import com.edusync.hr.service.HrStatsService;
 import com.edusync.hr.service.StaffService;
+import com.edusync.hr.service.StaffEvaluationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,16 +28,19 @@ public class HrController {
     private final DepartmentService departmentService;
     private final StaffService staffService;
     private final HrStatsService hrStatsService;
+    private final StaffEvaluationService evaluationService;
     
     @Autowired
     public HrController(
             DepartmentService departmentService,
             StaffService staffService,
-            HrStatsService hrStatsService
+            HrStatsService hrStatsService,
+            StaffEvaluationService evaluationService
     ) {
         this.departmentService = departmentService;
         this.staffService = staffService;
         this.hrStatsService = hrStatsService;
+        this.evaluationService = evaluationService;
     }
     
     // ============ HEALTH & STATS ============
@@ -173,6 +179,63 @@ public class HrController {
     public ResponseEntity<Void> deleteStaff(@PathVariable @NonNull Long id) {
         staffService.deleteStaff(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ============ STAFF EVALUATIONS ============
+
+    @GetMapping("/evaluations")
+    public ResponseEntity<List<StaffEvaluation>> getAllEvaluations() {
+        return ResponseEntity.ok(evaluationService.getAllEvaluations());
+    }
+
+    @GetMapping("/evaluations/{id}")
+    public ResponseEntity<StaffEvaluation> getEvaluationById(@PathVariable @NonNull Long id) {
+        return evaluationService.getEvaluationById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/evaluations/staff/{staffId}")
+    public ResponseEntity<List<StaffEvaluation>> getEvaluationsByStaffId(@PathVariable @NonNull Long staffId) {
+        return ResponseEntity.ok(evaluationService.getEvaluationsByStaffId(staffId));
+    }
+
+    @GetMapping("/evaluations/evaluator/{evaluatorId}")
+    public ResponseEntity<List<StaffEvaluation>> getEvaluationsByEvaluatorId(@PathVariable @NonNull Long evaluatorId) {
+        return ResponseEntity.ok(evaluationService.getEvaluationsByEvaluatorId(evaluatorId));
+    }
+
+    @GetMapping("/evaluations/status/{status}")
+    public ResponseEntity<List<StaffEvaluation>> getEvaluationsByStatus(@PathVariable EvaluationStatus status) {
+        return ResponseEntity.ok(evaluationService.getEvaluationsByStatus(status));
+    }
+
+    @PostMapping("/evaluations")
+    public ResponseEntity<StaffEvaluation> createEvaluation(@Valid @RequestBody StaffEvaluation evaluation) {
+        StaffEvaluation created = evaluationService.createEvaluation(evaluation);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/evaluations/{id}")
+    public ResponseEntity<StaffEvaluation> updateEvaluation(
+            @PathVariable @NonNull Long id,
+            @Valid @RequestBody StaffEvaluation evaluation) {
+        try {
+            StaffEvaluation updated = evaluationService.updateEvaluation(id, evaluation);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/evaluations/{id}")
+    public ResponseEntity<Void> deleteEvaluation(@PathVariable @NonNull Long id) {
+        try {
+            evaluationService.deleteEvaluation(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
 }

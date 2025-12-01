@@ -9,8 +9,8 @@ export interface Student {
     email: string;
     phone?: string;
     address?: string;
-    dateOfBirth?: string;
-    enrollmentDate?: string;
+    dateOfBirth: string; // REQUIRED by backend
+    enrollmentDate: string; // REQUIRED by backend
     program: string;
     currentSemester?: number;
     gpa?: number;

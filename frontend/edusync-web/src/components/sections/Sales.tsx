@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fi';
 import salesService from '../../services/salesService';
 import type { Lead, Task, Communication, SalesStage, SalesStats } from '../../services/salesService';
+import studentService from '../../services/studentService';
 
 const Sales: React.FC = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -432,8 +433,16 @@ const Sales: React.FC = () => {
     e.preventDefault();
     if (draggedLead) {
       try {
+        // Get the lead being moved
+        const lead = leadsData.find(l => l.id === draggedLead);
+        
         // Update lead status
         await salesService.updateLeadStatus(draggedLead, stageId);
+
+        // If moving to "enrolled" stage, automatically create a student
+        if (stageId.toLowerCase() === 'enrolled' && lead) {
+          await handleEnrollment(lead);
+        }
 
         // Reload all data to reflect changes
         await loadAllData();
@@ -444,6 +453,97 @@ const Sales: React.FC = () => {
     }
     setDraggedLead(null);
     setDragOverStage(null);
+  };
+
+  // Handle automatic student enrollment when lead is moved to "Enrolled" stage
+  const handleEnrollment = async (lead: Lead) => {
+    try {
+      // Check if student already exists
+      if (lead.studentId) {
+        console.log('Student already enrolled with ID:', lead.studentId);
+        return;
+      }
+
+      // Generate student ID
+      const studentId = await generateStudentId();
+
+      // Parse name
+      const nameParts = lead.name.trim().split(' ');
+      const firstName = nameParts[0] || 'Unknown';
+      const lastName = nameParts.slice(1).join(' ') || 'Student';
+
+      // Generate a default date of birth if not provided (required field!)
+      // Estimate based on grade: assume 6 years old in 1st grade + grade level
+      const estimateAge = lead.grade ? 6 + parseInt(lead.grade.match(/\d+/)?.[0] || '0') : 18;
+      const defaultDateOfBirth = new Date();
+      defaultDateOfBirth.setFullYear(defaultDateOfBirth.getFullYear() - estimateAge);
+      const dateOfBirth = defaultDateOfBirth.toISOString().split('T')[0];
+
+      // Create student record from lead data
+      const studentData = {
+        studentId: studentId,
+        firstName: firstName,
+        lastName: lastName,
+        email: lead.email,
+        phone: lead.phone || '',
+        dateOfBirth: dateOfBirth, // REQUIRED FIELD!
+        program: lead.program || 'General Studies',
+        enrollmentDate: new Date().toISOString().split('T')[0],
+        status: 'ACTIVE' as const,
+        feeStatus: (lead.tuitionPaid && lead.tuitionPaid > 0) ? 'PAID' as const : 'PENDING' as const,
+        guardianName: lead.parentName || '',
+        guardianPhone: lead.phone || '',
+        guardianEmail: lead.email || '',
+        currentSemester: 1,
+        gpa: 0,
+        attendancePercentage: 100
+      };
+
+      // Create student via Student Service
+      const createdStudent = await studentService.createStudent(studentData);
+      console.log('Student created successfully:', createdStudent);
+
+      // Update the lead with the student ID
+      if (createdStudent.id && lead.id) {
+        await salesService.updateLead(lead.id, {
+          ...lead,
+          studentId: createdStudent.studentId
+        });
+      }
+
+      // Show success message
+      alert(`✅ Student enrolled successfully!\n\nStudent ID: ${studentId}\nName: ${lead.name}\n\nThe student has been added to the Students section.`);
+    } catch (error: any) {
+      console.error('Failed to create student from lead:', error);
+      alert(`⚠️ Lead moved to Enrolled, but failed to create student record:\n${error.message}\n\nPlease manually create the student in the Students section.`);
+    }
+  };
+
+  // Generate unique student ID
+  const generateStudentId = async (): Promise<string> => {
+    try {
+      // Get all students to find the highest ID
+      const students = await studentService.getAllStudents();
+      
+      if (students.length === 0) {
+        return 'STU001';
+      }
+
+      // Find highest number
+      const studentNumbers = students
+        .map(s => s.studentId)
+        .filter(id => id && id.startsWith('STU'))
+        .map(id => parseInt(id.replace('STU', '')) || 0);
+      
+      const maxNumber = Math.max(...studentNumbers, 0);
+      const nextNumber = maxNumber + 1;
+      
+      return `STU${String(nextNumber).padStart(3, '0')}`;
+    } catch (error) {
+      // Fallback to timestamp-based ID if service fails
+      const timestamp = Date.now().toString().slice(-6);
+      return `STU${timestamp}`;
+    }
   };
 
   // Handle stage title editing
